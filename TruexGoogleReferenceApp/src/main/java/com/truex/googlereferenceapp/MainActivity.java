@@ -1,12 +1,15 @@
 package com.truex.googlereferenceapp;
 
 import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
 
-public class MainActivity extends AppCompatActivity {
+import com.truex.googlereferenceapp.home.HomeViewFragment;
+
+import dagger.android.support.DaggerAppCompatActivity;
+
+public class MainActivity extends DaggerAppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        displayFragment(new PlayerViewFragment());
+        displayFragment(new HomeViewFragment());
     }
 
     private void displayFragment(Fragment fragment) {

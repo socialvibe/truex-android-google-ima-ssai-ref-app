@@ -1,4 +1,4 @@
-package com.truex.googlereferenceapp.ads;
+package com.truex.googlereferenceapp.player.ads;
 
 import android.content.Context;
 import android.util.Log;
@@ -10,7 +10,6 @@ import com.truex.adrenderer.TruexAdRendererConstants;
 
 import com.truex.googlereferenceapp.player.PlaybackHandler;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Map;
@@ -24,13 +23,10 @@ public class TruexAdManager {
     private static final String CLASSTAG = TruexAdManager.class.getSimpleName();
 
     private PlaybackHandler playbackHandler;
-    private boolean didReceiveCredit;
     private TruexAdRenderer truexAdRenderer;
 
     public TruexAdManager(Context context, PlaybackHandler playbackHandler) {
         this.playbackHandler = playbackHandler;
-
-        didReceiveCredit = false;
 
         // Set-up the true[X] ad renderer
         truexAdRenderer = new TruexAdRenderer(context);
@@ -52,23 +48,18 @@ public class TruexAdManager {
     /**
      * Start displaying the true[X] engagement
      * @param viewGroup - the view group in which you would like to display the true[X] engagement
+     * @param adParameters - the ad parameters (i.e. the user_id, placement_hash, and vast_config_url)
+     * @param slotType - the slot in which the ad (i.e. "PREROLL" or "MIDROLL")
      */
-    public void startAd(ViewGroup viewGroup) {
-        try {
-            String json = String.format("{\"user_id\":\"3e47e82244f7aa7ac3fa60364a7ede8453f3f9fe\",\"placement_hash\":\"%s\",\"vast_config_url\":\"%s\"}\n", "81551ffa2b851abc5372ab9ed9f1f58adabe5203", "http://qa-get.truex.com/81551ffa2b851abc5372ab9ed9f1f58adabe5203/vast/config?asnw=&flag=%2Bamcb%2Bemcr%2Bslcb%2Bvicb%2Baeti-exvt&fw_key_values=&metr=0&prof=g_as3_truex&ptgt=a&pvrn=&resp=vmap1&slid=fw_truex&ssnw=&vdur=&vprn=");
-            JSONObject adParams = new JSONObject(json);
-
-            truexAdRenderer.init(adParams, TruexAdRendererConstants.PREROLL);
-            truexAdRenderer.start(viewGroup);
-        } catch (JSONException e) {
-            Log.e(CLASSTAG, "JSON ERROR");
-        }
+    public void startAd(ViewGroup viewGroup, JSONObject adParameters, String slotType) {
+        truexAdRenderer.init(adParameters, slotType);
+        truexAdRenderer.start(viewGroup);
     }
 
     /**
      * Inform the true[X] ad renderer that the application has resumed
      */
-    public void onResume() {
+    public void resume() {
         truexAdRenderer.resume();
     }
 
@@ -76,14 +67,14 @@ public class TruexAdManager {
     /**
      * Inform the true[X] ad renderer that the application has paused
      */
-    public void onPause() {
+    public void pause() {
         truexAdRenderer.pause();
     }
 
     /**
      * Inform that the true[X] ad renderer that the application has stopped
      */
-    public void onStop() {
+    public void stop() {
         truexAdRenderer.stop();
     }
 
@@ -91,15 +82,7 @@ public class TruexAdManager {
      * This method should be called once the true[X] ad manager is done
      */
     private void onCompletion() {
-        if (didReceiveCredit) {
-            // The user received true[ATTENTION] credit
-            // Resume the content stream (and skip any linear ads)
-            playbackHandler.resumeStream();
-        } else {
-            // The user did not receive credit
-            // Continue the content stream and display linear ads
-            playbackHandler.displayLinearAds();
-        }
+        playbackHandler.resumeStream();
     }
 
     /*
@@ -110,6 +93,7 @@ public class TruexAdManager {
     };
 
     /*
+       [6]
        Note: This event is triggered when the engagement is completed,
        either by the completion of the engagement or the user exiting the engagement
      */
@@ -121,6 +105,7 @@ public class TruexAdManager {
     };
 
     /*
+       [6]
        Note: This event is triggered when an error is encountered by the true[X] ad renderer
      */
     private IEventHandler adError = (Map<String, ?> data) -> {
@@ -131,6 +116,7 @@ public class TruexAdManager {
     };
 
     /*
+       [6]
        Note: This event is triggered if the engagement fails to load,
        as a result of there being no engagements available
      */
@@ -151,13 +137,14 @@ public class TruexAdManager {
     };
 
     /*
+       [5]
        Note: This event is triggered when the viewer has earned their true[ATTENTION] credit. We
        could skip over the linear ads here, so that when the ad is complete, all we would need
        to do is resume the stream.
      */
     private IEventHandler adFree = (Map<String, ?> data) -> {
         Log.d(CLASSTAG, "adFree");
-        didReceiveCredit = true;
+        playbackHandler.skipCurrentAdBreak();
     };
 
     /*
