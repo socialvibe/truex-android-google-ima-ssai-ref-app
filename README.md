@@ -1,9 +1,5 @@
 # TruexGoogleReferenceApp
 
-## Reference app for Android TV and Fire TV TAR (TruexAdRenderer) integrations using the Google Ad Manager (GAM)
-
-This is an Android TV and Fire TV application exposing direct calls into `TruexAdRenderer` instances, enabling functional testing as well as prototyping. The application is set up with a simple activity and the calls in the `MainActivity` should be self-explanatory.
-
 ## Overview
 
 This project contains sample source code that demonstrates how to integrate the true[X]
