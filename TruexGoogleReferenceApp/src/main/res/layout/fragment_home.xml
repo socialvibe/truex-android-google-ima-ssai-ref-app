@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:fancy="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/fragment"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/true_vision_loading_screen">
+
+    <FrameLayout
+        android:id="@+id/stream_selection_layout"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.google.android.exoplayer2.ui.PlayerView
+            android:id="@+id/player_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0.75"
+                android:background="#000000"/>
+
+        </com.google.android.exoplayer2.ui.PlayerView>
+
+        <ImageView
+            android:layout_width="141dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginTop="23dp"
+            android:src="@drawable/true_vision_logo" />
+
+        <TextView
+            android:id="@+id/stream_title"
+            android:layout_width="475dp"
+            android:layout_height="58dp"
+            android:layout_marginStart="71dp"
+            android:layout_marginTop="87dp"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/stream_description"
+            android:layout_width="644dp"
+            android:layout_height="72dp"
+            android:layout_marginStart="71dp"
+            android:layout_marginTop="122dp"
+            android:textColor="@android:color/white"
+            android:textSize="16sp" />
+
+        <mehdi.sakout.fancybuttons.FancyButton
+            android:id="@+id/play_button"
+            android:layout_width="154dp"
+            android:layout_height="43dp"
+            android:layout_marginStart="71dp"
+            android:layout_marginTop="199dp"
+            android:focusable="true"
+            android:clickable="true"
+            android:text="@string/play"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            fancy:fb_textColor="@android:color/black"
+            fancy:fb_fontIconResource="&#xf144;"
+            fancy:fb_fontIconSize="30dp"
+            fancy:fb_iconPosition="left"
+            fancy:fb_iconPaddingRight="8dp"
+            fancy:fb_defaultColor="@android:color/white"
+            fancy:fb_radius="5dp" />
+
+        <ImageView
+            android:id="@+id/stream_cover"
+            android:layout_width="154dp"
+            android:layout_height="220dp"
+            android:layout_marginStart="71dp"
+            android:layout_marginTop="280dp" />
+
+    </FrameLayout>
+
+</FrameLayout>

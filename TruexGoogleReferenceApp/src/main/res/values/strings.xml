@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">true[X] Google Reference App</string>
+    <string name="play">PLAY</string>
+    <string name="streams_config_url">https://stash.truex.com/reference-apps/firetv/config/reference-app-streams.json</string>
 </resources>
