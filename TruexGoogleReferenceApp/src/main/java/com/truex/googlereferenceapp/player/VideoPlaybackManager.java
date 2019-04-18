@@ -51,6 +51,8 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     private List<VideoStreamPlayer.VideoStreamPlayerCallback> playerCallbacks;
     private Listener listener;
 
+    private boolean didSeekPastAdBreak = true;
+
     // The renderer that drives the true[X] Engagement experience
     private TruexAdManager truexAdManager;
 
@@ -388,20 +390,35 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         // Display and resume the stream
         videoPlayer.display();
         videoPlayer.play();
+
+        // If we did not seek past the ad break -- stop here
+        if (!didSeekPastAdBreak) {
+            return;
+        }
+        didSeekPastAdBreak = false;
+
+
+        // Manually call onAdBreakEnded()
+        if (displayContainer != null && displayContainer.getVideoStreamPlayer() != null) {
+            displayContainer.getVideoStreamPlayer().onAdBreakEnded();
+        }
     }
 
     @Override
     public void skipCurrentAdBreak() {
+        // Retrieve current ad
         Ad ad = streamManager.getCurrentAd();
         if (ad == null) {
             return;
         }
 
+        // Retrieve ad pod info
         AdPodInfo adPodInfo = ad.getAdPodInfo();
         if (adPodInfo == null) {
             return;
         }
 
+        // Retrieve ad progress info
         AdProgressInfo adProgressInfo = streamManager.getAdProgressInfo();
         if (adProgressInfo == null) {
             return;
@@ -418,6 +435,9 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
 
         // Seek past the ad break
         videoPlayer.seekTo(seekPosition);
+
+        // We will need to manually call onAdBreakEnded() when we resume the stream
+        didSeekPastAdBreak = true;
     }
 
     /** AdErrorListener implementation **/
