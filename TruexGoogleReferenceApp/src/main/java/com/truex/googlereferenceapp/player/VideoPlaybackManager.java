@@ -430,8 +430,8 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         // Add the duration of the ad break
         seekPosition.addSeconds(adProgressInfo.getAdBreakDuration());
 
-        // Add three hundred milliseconds to avoid displaying a black screen with a frozen UI
-        seekPosition.addMilliseconds(300);
+        // Add two seconds to avoid displaying a frozen UI
+        seekPosition.addSeconds(2);
 
         // Seek past the ad break
         videoPlayer.seekTo(seekPosition);

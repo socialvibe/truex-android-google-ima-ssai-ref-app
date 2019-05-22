@@ -14,6 +14,10 @@ public final class FileUtils {
     }
 
     public static String getRawFileContents(Context context, int resourceId) {
+        if (context == null) {
+            return null;
+        }
+
         InputStream vastContentStream = context.getResources().openRawResource(resourceId);
 
         StringBuilder stringBuilder = new StringBuilder();
