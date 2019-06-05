@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'io.fabric'
 
 android {
     compileSdkVersion 27
@@ -10,6 +11,9 @@ android {
         versionName "1.0"
     }
     buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -23,7 +27,10 @@ android {
 
 repositories {
     maven {
-        url "https://raw.github.com/socialvibe/truex-tv-integrations/android"
+        url 'https://maven.fabric.io/public'
+    }
+    maven {
+        url 'https://raw.github.com/socialvibe/truex-tv-integrations/android'
     }
 }
 
@@ -33,23 +40,19 @@ dependencies {
     implementation 'com.android.support:support-v4:27.1.1'
     implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation 'com.android.support:customtabs:27.1.1'
-
     implementation 'com.google.ads.interactivemedia.v3:interactivemedia:3.10.9'
     implementation 'com.google.android.gms:play-services-ads:17.2.0'
-
     implementation 'com.google.android.exoplayer:exoplayer:2.8.0'
-
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
-
     implementation 'com.github.bumptech.glide:glide:4.9.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.9.0'
-
     implementation 'com.github.medyo:fancybuttons:1.9.1'
-
     implementation 'com.google.dagger:dagger-android:2.20'
     implementation 'com.google.dagger:dagger-android-support:2.20'
     annotationProcessor 'com.google.dagger:dagger-android-processor:2.20'
     annotationProcessor 'com.google.dagger:dagger-compiler:2.20'
-
+    implementation('com.crashlytics.sdk.android:crashlytics:2.10.1@aar') {
+        transitive = true;
+    }
     implementation 'com.truex:TruexAdRenderer-tv:2.1.0'
 }

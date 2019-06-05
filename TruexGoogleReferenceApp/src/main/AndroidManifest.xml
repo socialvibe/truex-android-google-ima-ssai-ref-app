@@ -22,6 +22,10 @@
             android:name="com.google.android.gms.ads.AD_MANAGER_APP"
             android:value="true"/>
 
+        <meta-data
+            android:name="io.fabric.ApiKey"
+            android:value="b59058b18fe58469a4d34031fd9cc958fa15e4fd" />
+
         <activity
             android:name=".MainActivity"
             android:banner="@drawable/app_icon"
