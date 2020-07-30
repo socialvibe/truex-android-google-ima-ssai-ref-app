@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.truex.googlereferenceapp"
-        minSdkVersion 21
+        minSdkVersion 25
         targetSdkVersion 27
         versionCode 1
         versionName "1.0"
@@ -23,18 +23,17 @@ android {
 
 repositories {
     maven {
-        url "http://ctv.truex.com.s3.amazonaws.com/android/maven"
+        url "https://ctv.truex.com/android/maven"
     }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.android.support:support-v4:27.1.1'
-    implementation 'com.android.support:recyclerview-v7:27.1.1'
-    implementation 'com.android.support:customtabs:27.1.1'
+    implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0-beta01'
+    implementation 'androidx.browser:browser:1.0.0-beta01'
     implementation 'com.google.ads.interactivemedia.v3:interactivemedia:3.10.9'
-    implementation 'com.google.android.gms:play-services-ads:17.2.0'
     implementation 'com.google.android.exoplayer:exoplayer:2.8.0'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.github.bumptech.glide:glide:4.9.0'
@@ -44,5 +43,5 @@ dependencies {
     implementation 'com.google.dagger:dagger-android-support:2.20'
     annotationProcessor 'com.google.dagger:dagger-android-processor:2.20'
     annotationProcessor 'com.google.dagger:dagger-compiler:2.20'
-    implementation 'com.truex:TruexAdRenderer-tv:2.1.0'
+    implementation 'com.truex:TruexAdRenderer-tv:2.1.2'
 }
