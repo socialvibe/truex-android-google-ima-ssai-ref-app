@@ -1,8 +1,8 @@
 {
   "title" : "Day in the Life of a Product Manager",
   "description" : "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut dictum, diam sed gravida tincidunt, libero lectus maximus elit, eget scelerisque ex orci a massa. Nullam ut mi ut lectus molestie porta.",
-  "cover" : "https://stash.truex.com/reference-apps/scratch/truex_cover_placeholder_spaceneedle.png",
-  "preview" : "https://media.truex.com/video_assets/2017-03-06/a9fbc895-6987-440e-b940-eeef8a714338_large.mp4",
+  "cover" : "http://stash.truex.com/reference-apps/scratch/truex_cover_placeholder_spaceneedle.png",
+  "preview" : "http://media.truex.com/video_assets/2017-03-06/a9fbc895-6987-440e-b940-eeef8a714338_large.mp4",
   "google_content_id" : "2496857",
   "google_video_id" : "truex-content22-4k"
 }
