@@ -4,7 +4,7 @@ android {
     compileSdkVersion 30
     defaultConfig {
         applicationId "com.truex.googlereferenceapp"
-        minSdkVersion 25
+        minSdkVersion 21
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
@@ -43,5 +43,9 @@ dependencies {
     implementation 'com.google.dagger:dagger-android-support:2.20'
     annotationProcessor 'com.google.dagger:dagger-android-processor:2.20'
     annotationProcessor 'com.google.dagger:dagger-compiler:2.20'
-    implementation 'com.truex:TruexAdRenderer-tv:2.3.0'
+    // True[x] Ad Renderer (TAR) Dependency
+    // Note: to refer to a local version of the TAR project, comment out the com.truex dependency
+    // and uncomment the project one below.
+    //implementation 'com.truex:TruexAdRenderer-tv:2.4.0'
+    implementation project(':TruexAdRenderer')
 }
