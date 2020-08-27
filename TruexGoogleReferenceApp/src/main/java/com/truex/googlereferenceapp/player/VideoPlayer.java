@@ -39,7 +39,9 @@ import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
+import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -81,7 +83,7 @@ public class VideoPlayer {
         DefaultTrackSelector.Parameters params = new DefaultTrackSelector.ParametersBuilder().setPreferredTextLanguage("en").build();
         trackSelector.setParameters(params);
 
-        player = ExoPlayerFactory.newSimpleInstance(new DefaultRenderersFactory(context),
+        player = ExoPlayerFactory.newSimpleInstance(this.context, new DefaultRenderersFactory(context),
                 trackSelector, new DefaultLoadControl());
         playerView.setPlayer(player);
         playerView.setControlDispatcher(new ControlDispatcher() {
