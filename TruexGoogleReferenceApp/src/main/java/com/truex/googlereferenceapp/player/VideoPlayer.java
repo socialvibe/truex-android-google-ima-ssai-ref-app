@@ -28,6 +28,8 @@ import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.Timeline.Period;
+import com.google.android.exoplayer2.metadata.Metadata;
+import com.google.android.exoplayer2.metadata.id3.TextInformationFrame;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
@@ -77,6 +79,8 @@ public class VideoPlayer {
 
         player = new ExoPlayer.Builder(this.context).build();
         playerView.setPlayer(player);
+        player.setPlayWhenReady(true);
+
 //        playerView.setControlDispatcher(new ControlDispatcher() {
 //            @Override
 //            public boolean dispatchSetPlayWhenReady(Player player, boolean playWhenReady) {
@@ -231,6 +235,8 @@ public class VideoPlayer {
     }
 
     long getCurrentPositionPeriod() {
+        if (player == null) return 0;
+
         // Adjust position to be relative to start of period rather than window, to account for DVR
         // window.
         long position = player.getCurrentPosition();
@@ -243,10 +249,10 @@ public class VideoPlayer {
     }
 
     int getVolume() {
-        return Math.round(player.getVolume() * 100);
+        return player == null ? 0 : Math.round(player.getVolume() * 100);
     }
 
     long getDuration() {
-        return player.getDuration();
+        return player == null ? 0 : player.getDuration();
     }
 }

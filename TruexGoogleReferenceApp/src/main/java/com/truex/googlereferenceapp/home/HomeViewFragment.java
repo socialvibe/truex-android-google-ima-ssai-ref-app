@@ -128,7 +128,7 @@ public class HomeViewFragment extends DaggerFragment {
         Fragment fragment = new PlayerViewFragment();
         fragment.setArguments(arguments);
 
-        getFragmentManager().beginTransaction()
+        getParentFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
