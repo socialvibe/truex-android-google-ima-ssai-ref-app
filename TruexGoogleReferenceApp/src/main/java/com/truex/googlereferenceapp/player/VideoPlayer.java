@@ -23,25 +23,17 @@ import android.util.Log;
 import android.view.View;
 
 import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ControlDispatcher;
-import com.google.android.exoplayer2.DefaultLoadControl;
-import com.google.android.exoplayer2.DefaultRenderersFactory;
-import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.Timeline.Period;
-import com.google.android.exoplayer2.metadata.Metadata;
-import com.google.android.exoplayer2.metadata.id3.TextInformationFrame;
-import com.google.android.exoplayer2.source.BaseMediaSource;
-import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -59,7 +51,7 @@ public class VideoPlayer {
 
     private Context context;
 
-    private SimpleExoPlayer player;
+    private ExoPlayer player;
     private PlayerView playerView;
     private VideoPlayerCallback playerCallback;
 
@@ -83,44 +75,43 @@ public class VideoPlayer {
         DefaultTrackSelector.Parameters params = new DefaultTrackSelector.ParametersBuilder().setPreferredTextLanguage("en").build();
         trackSelector.setParameters(params);
 
-        player = ExoPlayerFactory.newSimpleInstance(this.context, new DefaultRenderersFactory(context),
-                trackSelector, new DefaultLoadControl());
+        player = new ExoPlayer.Builder(this.context).build();
         playerView.setPlayer(player);
-        playerView.setControlDispatcher(new ControlDispatcher() {
-            @Override
-            public boolean dispatchSetPlayWhenReady(Player player, boolean playWhenReady) {
-                player.setPlayWhenReady(playWhenReady);
-                return true;
-            }
-
-            @Override
-            public boolean dispatchSeekTo(Player player, int windowIndex, long positionMs) {
-                if (canSeek) {
-                    if (playerCallback != null) {
-                        playerCallback.onSeek(windowIndex, positionMs);
-                    } else {
-                        player.seekTo(windowIndex, positionMs);
-                    }
-                }
-                return true;
-            }
-
-            @Override
-            public boolean dispatchSetRepeatMode(Player player, int repeatMode) {
-                return false;
-            }
-
-            @Override
-            public boolean dispatchSetShuffleModeEnabled(Player player,
-                                                         boolean shuffleModeEnabled) {
-                return false;
-            }
-
-            @Override
-            public boolean dispatchStop(Player player, boolean reset) {
-                return false;
-            }
-        });
+//        playerView.setControlDispatcher(new ControlDispatcher() {
+//            @Override
+//            public boolean dispatchSetPlayWhenReady(Player player, boolean playWhenReady) {
+//                player.setPlayWhenReady(playWhenReady);
+//                return true;
+//            }
+//
+//            @Override
+//            public boolean dispatchSeekTo(Player player, int windowIndex, long positionMs) {
+//                if (canSeek) {
+//                    if (playerCallback != null) {
+//                        playerCallback.onSeek(windowIndex, positionMs);
+//                    } else {
+//                        player.seekTo(windowIndex, positionMs);
+//                    }
+//                }
+//                return true;
+//            }
+//
+//            @Override
+//            public boolean dispatchSetRepeatMode(Player player, int repeatMode) {
+//                return false;
+//            }
+//
+//            @Override
+//            public boolean dispatchSetShuffleModeEnabled(Player player,
+//                                                         boolean shuffleModeEnabled) {
+//                return false;
+//            }
+//
+//            @Override
+//            public boolean dispatchStop(Player player, boolean reset) {
+//                return false;
+//            }
+//        });
     }
 
     public void play() {
@@ -141,19 +132,19 @@ public class VideoPlayer {
 
         DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(context, USER_AGENT);
         int type = Util.inferContentType(Uri.parse(streamURL));
+        MediaItem mediaItem = MediaItem.fromUri(Uri.parse(streamURL));
         MediaSource mediaSource;
         switch (type) {
-            case C.TYPE_HLS:
+            case C.CONTENT_TYPE_HLS:
                 mediaSource = new HlsMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(Uri.parse(streamURL));
+                        .createMediaSource(mediaItem);
                 break;
-            case C.TYPE_DASH:
+            case C.CONTENT_TYPE_DASH:
                 mediaSource = new DashMediaSource.Factory(new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
-                        .createMediaSource(Uri.parse(streamURL));
+                        .createMediaSource(mediaItem);
                 break;
-            case C.TYPE_OTHER:
-                mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(Uri.parse(streamURL));
+            case C.CONTENT_TYPE_OTHER:
+                mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
                 break;
             default:
                 Log.e(CLASSTAG, "Error! Invalid Media Source, exiting");
@@ -163,20 +154,20 @@ public class VideoPlayer {
         player.prepare(mediaSource);
 
         // Register for ID3 events.
-        player.addMetadataOutput((Metadata metadata) -> {
-            for (int i = 0; i < metadata.length(); i++) {
-                Metadata.Entry entry = metadata.get(i);
-                if (entry instanceof TextInformationFrame) {
-                    TextInformationFrame textFrame = (TextInformationFrame) entry;
-                    if ("TXXX".equals(textFrame.id)) {
-                        Log.d(CLASSTAG, "Received user text: " + textFrame.value);
-                        if (playerCallback != null) {
-                            playerCallback.onUserTextReceived(textFrame.value);
-                        }
-                    }
-                }
-            }
-        });
+//        player.addMetadataOutput((Metadata metadata) -> {
+//            for (int i = 0; i < metadata.length(); i++) {
+//                Metadata.Entry entry = metadata.get(i);
+//                if (entry instanceof TextInformationFrame) {
+//                    TextInformationFrame textFrame = (TextInformationFrame) entry;
+//                    if ("TXXX".equals(textFrame.id)) {
+//                        Log.d(CLASSTAG, "Received user text: " + textFrame.value);
+//                        if (playerCallback != null) {
+//                            playerCallback.onUserTextReceived(textFrame.value);
+//                        }
+//                    }
+//                }
+//            }
+//        });
 
         player.setPlayWhenReady(true);
         isStreamRequested = true;

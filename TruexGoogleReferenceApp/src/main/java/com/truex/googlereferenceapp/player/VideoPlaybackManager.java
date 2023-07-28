@@ -323,6 +323,14 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
                 videoPlayer.play();
             }
 
+            public void pause() {
+                videoPlayer.pause();
+            }
+
+            public void resume() {
+                videoPlayer.play();
+            }
+
             @Override
             public int getVolume() {
                 return videoPlayer.getVolume();
