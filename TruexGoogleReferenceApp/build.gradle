@@ -39,16 +39,17 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.0.0-beta01'
-    implementation 'androidx.browser:browser:1.0.0-beta01'
-    implementation 'com.google.ads.interactivemedia.v3:interactivemedia:3.10.9'
-    implementation 'com.google.android.exoplayer:exoplayer:2.10.5'
-    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.1'
+    //implementation 'androidx.browser:browser:1.6.0-rc01'
+    implementation 'com.google.ads.interactivemedia.v3:interactivemedia:3.29.0'
+    implementation 'com.google.android.exoplayer:exoplayer:2.18.7'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.0'
     implementation 'com.github.bumptech.glide:glide:4.9.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.9.0'
-    implementation 'com.github.medyo:fancybuttons:1.9.1'
+    // https://mvnrepository.com/artifact/com.github.medyo/fancybuttons
+    implementation 'com.github.medyo:fancybuttons:1.8.1'
     implementation 'com.google.dagger:dagger-android:2.20'
     implementation 'com.google.dagger:dagger-android-support:2.20'
     annotationProcessor 'com.google.dagger:dagger-android-processor:2.20'
