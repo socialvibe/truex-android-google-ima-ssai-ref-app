@@ -9,6 +9,10 @@
         android:name="android.software.leanback"
         android:required="true" />
 
+    <!-- Required permissions for the IMA SDK -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:name=".MainApplication"
         android:allowBackup="false"
@@ -39,5 +43,16 @@
             </intent-filter>
         </activity>
     </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
 
 </manifest>

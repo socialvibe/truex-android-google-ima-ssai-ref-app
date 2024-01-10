@@ -13,7 +13,7 @@ This reference app covers the essential work. For a more detailed integration gu
 
 We assume you have either already integrated the IMA SDK with your app, or you are
 working from a project that has been created following the instructions at the
-[IMA SDK Quickstart page](https://developers.google.com/interactive-media-ads/docs/sdks/android/quickstart).
+[IMA SDK For Android page](https://developers.google.com/interactive-media-ads/docs/sdks/android).
 We also assume you have already acquired the true[X] renderer code through
 [Maven](https://github.com/socialvibe/truex-tv-integrations) or direct download,
 and have added to your project appropriately.

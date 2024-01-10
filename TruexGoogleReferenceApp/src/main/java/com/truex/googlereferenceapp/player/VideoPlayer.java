@@ -73,10 +73,6 @@ public class VideoPlayer {
     private void initPlayer() {
         release();
 
-        DefaultTrackSelector trackSelector = new DefaultTrackSelector();
-        DefaultTrackSelector.Parameters params = new DefaultTrackSelector.ParametersBuilder().setPreferredTextLanguage("en").build();
-        trackSelector.setParameters(params);
-
         player = new ExoPlayer.Builder(this.context).build();
         playerView.setPlayer(player);
         player.setPlayWhenReady(true);
