@@ -22,24 +22,21 @@ import android.os.Build;
 import android.util.Log;
 import android.view.View;
 
-import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.Timeline;
-import com.google.android.exoplayer2.Timeline.Period;
-import com.google.android.exoplayer2.metadata.Metadata;
-import com.google.android.exoplayer2.metadata.id3.TextInformationFrame;
-import com.google.android.exoplayer2.source.MediaSource;
-import com.google.android.exoplayer2.source.ProgressiveMediaSource;
-import com.google.android.exoplayer2.source.dash.DashMediaSource;
-import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
-import com.google.android.exoplayer2.source.hls.HlsMediaSource;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.ui.StyledPlayerView;
-import com.google.android.exoplayer2.upstream.DataSource;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.util.Util;
+import androidx.media3.common.C;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.Player;
+import androidx.media3.common.Timeline;
+import androidx.media3.common.Timeline.Period;
+import androidx.media3.common.util.Util;
+import androidx.media3.datasource.DataSource;
+import androidx.media3.datasource.DefaultDataSourceFactory;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.dash.DashMediaSource;
+import androidx.media3.exoplayer.dash.DefaultDashChunkSource;
+import androidx.media3.exoplayer.hls.HlsMediaSource;
+import androidx.media3.exoplayer.source.MediaSource;
+import androidx.media3.exoplayer.source.ProgressiveMediaSource;
+import androidx.media3.ui.PlayerView;
 
 /**
  * A video player that plays HLS or DASH streams using ExoPlayer.
@@ -54,7 +51,7 @@ public class VideoPlayer {
     private Context context;
 
     private ExoPlayer player;
-    private StyledPlayerView playerView;
+    private PlayerView playerView;
     private VideoPlayerCallback playerCallback;
 
     private Timeline.Period period = new Period();
@@ -63,7 +60,7 @@ public class VideoPlayer {
     private Boolean isStreamRequested;
     private boolean canSeek;
 
-    public VideoPlayer(Context context, StyledPlayerView playerView) {
+    public VideoPlayer(Context context, PlayerView playerView) {
         this.context = context;
         this.playerView = playerView;
         isStreamRequested = false;
@@ -152,22 +149,6 @@ public class VideoPlayer {
         }
 
         player.prepare(mediaSource);
-
-        // Register for ID3 events.
-//        player.addMetadataOutput((Metadata metadata) -> {
-//            for (int i = 0; i < metadata.length(); i++) {
-//                Metadata.Entry entry = metadata.get(i);
-//                if (entry instanceof TextInformationFrame) {
-//                    TextInformationFrame textFrame = (TextInformationFrame) entry;
-//                    if ("TXXX".equals(textFrame.id)) {
-//                        Log.d(CLASSTAG, "Received user text: " + textFrame.value);
-//                        if (playerCallback != null) {
-//                            playerCallback.onUserTextReceived(textFrame.value);
-//                        }
-//                    }
-//                }
-//            }
-//        });
 
         player.setPlayWhenReady(true);
         isStreamRequested = true;

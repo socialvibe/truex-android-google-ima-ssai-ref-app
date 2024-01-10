@@ -1,8 +1,8 @@
 package com.truex.googlereferenceapp.home;
 
+import static com.truex.googlereferenceapp.home.StreamConfiguration.requestStreamConfigurations;
+
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,9 +10,12 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.media3.common.Player;
+import androidx.media3.ui.PlayerView;
+
 import com.bumptech.glide.Glide;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.truex.googlereferenceapp.R;
 import com.truex.googlereferenceapp.player.PlayerViewFragment;
 import com.truex.googlereferenceapp.player.VideoPlayer;
@@ -28,8 +31,6 @@ import javax.inject.Inject;
 import dagger.android.support.DaggerFragment;
 import okhttp3.OkHttpClient;
 
-import static com.truex.googlereferenceapp.home.StreamConfiguration.requestStreamConfigurations;
-
 public class HomeViewFragment extends DaggerFragment {
     private static String CLASSTAG = HomeViewFragment.class.getSimpleName();
 
@@ -42,7 +43,7 @@ public class HomeViewFragment extends DaggerFragment {
     private TextView streamTitle;
     private TextView streamDescription;
     private ImageView streamCover;
-    private StyledPlayerView previewPlayerView;
+    private PlayerView previewPlayerView;
     private VideoPlayer previewPlayer;
     private View playButton;
 
