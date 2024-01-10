@@ -36,7 +36,7 @@ import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
@@ -54,7 +54,7 @@ public class VideoPlayer {
     private Context context;
 
     private ExoPlayer player;
-    private PlayerView playerView;
+    private StyledPlayerView playerView;
     private VideoPlayerCallback playerCallback;
 
     private Timeline.Period period = new Period();
@@ -63,7 +63,7 @@ public class VideoPlayer {
     private Boolean isStreamRequested;
     private boolean canSeek;
 
-    public VideoPlayer(Context context, PlayerView playerView) {
+    public VideoPlayer(Context context, StyledPlayerView playerView) {
         this.context = context;
         this.playerView = playerView;
         isStreamRequested = false;

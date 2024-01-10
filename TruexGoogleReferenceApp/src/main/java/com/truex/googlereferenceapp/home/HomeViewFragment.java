@@ -12,7 +12,7 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.truex.googlereferenceapp.R;
 import com.truex.googlereferenceapp.player.PlayerViewFragment;
 import com.truex.googlereferenceapp.player.VideoPlayer;
@@ -42,7 +42,7 @@ public class HomeViewFragment extends DaggerFragment {
     private TextView streamTitle;
     private TextView streamDescription;
     private ImageView streamCover;
-    private PlayerView previewPlayerView;
+    private StyledPlayerView previewPlayerView;
     private VideoPlayer previewPlayer;
     private View playButton;
 
