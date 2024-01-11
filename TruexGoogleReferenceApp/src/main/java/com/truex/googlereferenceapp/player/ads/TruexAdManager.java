@@ -100,11 +100,8 @@ public class TruexAdManager {
                 break;
         }
         if (closeAd) {
-            if (didReceiveCredit) {
-                playbackHandler.skipCurrentAdBreak();
-            } else {
-                playbackHandler.resumeStream();
-            }
+            if (didReceiveCredit) playbackHandler.skipCurrentAdBreak();
+            playbackHandler.resumeStream();
         }
     };
 }
