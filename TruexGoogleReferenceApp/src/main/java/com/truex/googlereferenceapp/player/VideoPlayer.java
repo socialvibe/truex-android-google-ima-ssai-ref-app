@@ -22,14 +22,16 @@ import android.os.Build;
 import android.util.Log;
 import android.view.View;
 
+import androidx.annotation.OptIn;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
 import androidx.media3.common.Timeline.Period;
+import androidx.media3.common.util.UnstableApi;
 import androidx.media3.common.util.Util;
 import androidx.media3.datasource.DataSource;
-import androidx.media3.datasource.DefaultDataSourceFactory;
+import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.dash.DashMediaSource;
 import androidx.media3.exoplayer.dash.DefaultDashChunkSource;
@@ -115,6 +117,7 @@ public class VideoPlayer {
         play(Player.REPEAT_MODE_OFF, 1);
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     public void play(int repeatMode, int volume) {
         if (isStreamRequested) {
             // Stream requested, just resume.
@@ -127,7 +130,7 @@ public class VideoPlayer {
         player.setRepeatMode(repeatMode);
         player.setVolume(volume);
 
-        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(context, USER_AGENT);
+        DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
         int type = Util.inferContentType(Uri.parse(streamURL));
         MediaItem mediaItem = MediaItem.fromUri(Uri.parse(streamURL));
         MediaSource mediaSource;
@@ -187,6 +190,7 @@ public class VideoPlayer {
         isStreamRequested = false; //request new stream on play
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     public void enableControls(boolean doEnable) {
         if (doEnable) {
             playerView.showController();
