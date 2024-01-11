@@ -110,8 +110,10 @@ public class HomeViewFragment extends DaggerFragment {
                     .into(streamCover);
 
             // Update and play the preview video
-            previewPlayer.setStreamURL(currentStreamConfiguration.getPreviewURL());
-            previewPlayer.play(Player.REPEAT_MODE_ONE, 0);
+            previewPlayer.setStreamUrl(currentStreamConfiguration.getPreviewURL());
+            previewPlayer.enableRepeatOnce();
+            previewPlayer.setVolume(0);
+            previewPlayer.play();
 
             // Set-up the Play Button
             playButton.setOnClickListener((View v) -> onPlayButtonClicked());

@@ -14,6 +14,7 @@ import com.google.ads.interactivemedia.v3.api.AdsManagerLoadedEvent;
 import com.google.ads.interactivemedia.v3.api.AdsRenderingSettings;
 import com.google.ads.interactivemedia.v3.api.CuePoint;
 import com.google.ads.interactivemedia.v3.api.ImaSdkFactory;
+import com.google.ads.interactivemedia.v3.api.ImaSdkSettings;
 import com.google.ads.interactivemedia.v3.api.StreamDisplayContainer;
 import com.google.ads.interactivemedia.v3.api.StreamManager;
 import com.google.ads.interactivemedia.v3.api.StreamRequest;
@@ -45,6 +46,8 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     private List<VideoStreamPlayer.VideoStreamPlayerCallback> playerCallbacks;
     private Listener listener;
 
+    private long snapBackTimeMs; // Stream time to snap back to, in milliseconds.
+
     private boolean didSeekPastAdBreak = true;
 
     // The renderer that drives the true[X] Engagement experience
@@ -65,8 +68,65 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         this.adUiContainer = adUiContainer;
         this.playerCallbacks = new ArrayList<>();
         this.sdkFactory = ImaSdkFactory.getInstance();
-        this.displayContainer = sdkFactory.createStreamDisplayContainer();
-        this.adsLoader = sdkFactory.createAdsLoader(context, sdkFactory.createImaSdkSettings(), displayContainer);
+        ImaSdkSettings settings = sdkFactory.createImaSdkSettings();
+        VideoStreamPlayer videoStreamPlayer = createVideoStreamPlayer();
+        this.displayContainer = ImaSdkFactory.createStreamDisplayContainer(adUiContainer, videoStreamPlayer);
+        videoPlayer.setCallback(
+                new VideoPlayerCallback() {
+                    @Override
+                    public void onUserTextReceived(String userText) {
+                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
+                            callback.onUserTextReceived(userText);
+                        }
+                    }
+
+                    @Override
+                    public void onSeek(int windowIndex, long positionMs) {
+                        long timeToSeek = positionMs;
+                        if (streamManager != null) {
+                            CuePoint cuePoint = streamManager.getPreviousCuePointForStreamTimeMs(positionMs);
+                            if (cuePoint != null && !cuePoint.isPlayed()) {
+                                snapBackTimeMs = timeToSeek; // Update snap back time.
+                                // Missed cue point, so snap back to the beginning of cue point.
+                                timeToSeek = cuePoint.getStartTimeMs();
+                                Log.i(CLASSTAG, "SnapBack to " + timeToSeek + " ms.");
+                                videoPlayer.seekTo(windowIndex, Math.round(timeToSeek));
+                                videoPlayer.setCanSeek(false);
+                                return;
+                            }
+                        }
+                        videoPlayer.seekTo(windowIndex, Math.round(timeToSeek));
+                    }
+
+                    @Override
+                    public void onContentComplete() {
+                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
+                            callback.onContentComplete();
+                        }
+                    }
+
+                    @Override
+                    public void onPause() {
+                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
+                            callback.onPause();
+                        }
+                    }
+
+                    @Override
+                    public void onResume() {
+                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
+                            callback.onResume();
+                        }
+                    }
+
+                    @Override
+                    public void onVolumeChanged(int percentage) {
+                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
+                            callback.onVolumeChanged(percentage);
+                        }
+                    }
+                });
+        adsLoader = sdkFactory.createAdsLoader(context, settings, displayContainer);
     }
 
     /**
@@ -159,50 +219,11 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
      * @return the new Stream Request that will be used to begin playback
      */
     private StreamRequest buildStreamRequest() {
-        // Set-up the video stream player
-        VideoStreamPlayer videoStreamPlayer = createVideoStreamPlayer();
-        videoPlayer.setCallback(
-                new VideoPlayerCallback() {
-                    @Override
-                    public void onUserTextReceived(String userText) {
-                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback :
-                                playerCallbacks) {
-                            callback.onUserTextReceived(userText);
-                        }
-                    }
-                    @Override
-                    public void onSeek(int windowIndex, long milliseconds) {
-                        SeekPosition seekPosition = SeekPosition.fromMilliseconds(milliseconds);
-                        seekTo(windowIndex, seekPosition);
-                    }
-                });
-
-        // Set-up the display container
-        displayContainer.setVideoStreamPlayer(videoStreamPlayer);
-        displayContainer.setAdContainer(adUiContainer);
-
         // Create the stream request
         return sdkFactory.createVodStreamRequest(
                 streamConfiguration.getContentID(),
                 streamConfiguration.getVideoID(),
                 null);
-    }
-
-    /**
-     * Seeks to the provided seek position while respecting any ad pods within the stream
-     * @param windowIndex the window index, within the stream, that we will be seeking to
-     * @param seekPosition the position, within the stream, that we will be seeking to
-     */
-    private void seekTo(int windowIndex, SeekPosition seekPosition) {
-        // See if we would seek past an ad, and if so, jump back to it.
-        SeekPosition newSeekPosition = seekPosition;
-        if (streamManager != null) {
-            CuePoint prevCuePoint  = streamManager.getPreviousCuePointForStreamTime(seekPosition.getSeconds());
-            if (prevCuePoint != null && !prevCuePoint.isPlayed()) {
-                newSeekPosition = SeekPosition.fromSeconds(prevCuePoint.getStartTime());
-            }
-        }
-        videoPlayer.seekTo(windowIndex, newSeekPosition);
     }
 
     /**
@@ -221,7 +242,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         seekPosition.subtractMilliseconds(100);
 
         // Seek past the ad
-        videoPlayer.seekTo(seekPosition);
+        videoPlayer.seekTo(seekPosition.getMilliseconds());
     }
 
     /**
@@ -268,7 +289,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         return new VideoStreamPlayer() {
             @Override
             public void loadUrl(String url, List<HashMap<String, String>> subtitles) {
-                videoPlayer.setStreamURL(url);
+                videoPlayer.setStreamUrl(url);
                 videoPlayer.play();
             }
 
@@ -309,11 +330,17 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
 
                 // Re-enable player controls
                 videoPlayer.enableControls(true);
+
+                if (snapBackTimeMs > 0) {
+                    Log.i(CLASSTAG, "SampleAdsWrapper seeking " + snapBackTimeMs + " ms.");
+                    videoPlayer.seekTo(Math.round(snapBackTimeMs));
+                }
+                snapBackTimeMs = 0;
             }
 
             @Override
             public VideoProgressUpdate getContentProgress() {
-                return new VideoProgressUpdate(videoPlayer.getCurrentPositionPeriod(),
+                return new VideoProgressUpdate(videoPlayer.getCurrentPositionMs(),
                         videoPlayer.getDuration());
             }
 
@@ -327,10 +354,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
 
             public void seek(long milliseconds) {
                 Log.i(CLASSTAG, "Seek Called");
-
-                // Seek to the given seek position
-                SeekPosition seekPosition = SeekPosition.fromMilliseconds(milliseconds);
-                videoPlayer.seekTo(seekPosition);
+                videoPlayer.seekTo(milliseconds);
             }
         };
     }
@@ -348,16 +372,13 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         videoPlayer.show();
         videoPlayer.play();
 
-        // If we did not seek past the ad break -- stop here
-        if (!didSeekPastAdBreak) {
-            return;
-        }
-        didSeekPastAdBreak = false;
-
-
-        // Manually call onAdBreakEnded()
-        if (displayContainer != null && displayContainer.getVideoStreamPlayer() != null) {
-            displayContainer.getVideoStreamPlayer().onAdBreakEnded();
+        if (didSeekPastAdBreak) {
+            // Manually call onAdBreakEnded() now
+            didSeekPastAdBreak = false;
+            VideoStreamPlayer streamPlayer = displayContainer != null ? displayContainer.getVideoStreamPlayer() : null;
+            if (streamPlayer != null) {
+                streamPlayer.onAdBreakEnded();
+            }
         }
     }
 
@@ -391,7 +412,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         seekPosition.addSeconds(2);
 
         // Seek past the ad break
-        videoPlayer.seekTo(seekPosition);
+        videoPlayer.seekTo(seekPosition.getMilliseconds());
 
         // We will need to manually call onAdBreakEnded() when we resume the stream
         didSeekPastAdBreak = true;

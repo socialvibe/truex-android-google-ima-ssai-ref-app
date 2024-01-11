@@ -18,16 +18,16 @@ package com.truex.googlereferenceapp.player;
 
 import android.content.Context;
 import android.net.Uri;
-import android.os.Build;
 import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.OptIn;
 import androidx.media3.common.C;
+import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.Metadata;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
-import androidx.media3.common.Timeline.Period;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.common.util.Util;
 import androidx.media3.datasource.DataSource;
@@ -38,123 +38,133 @@ import androidx.media3.exoplayer.dash.DefaultDashChunkSource;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
+import androidx.media3.extractor.metadata.emsg.EventMessage;
+import androidx.media3.extractor.metadata.id3.TextInformationFrame;
 import androidx.media3.ui.PlayerView;
 
 /**
  * A video player that plays HLS or DASH streams using ExoPlayer.
  */
+@OptIn(markerClass = UnstableApi.class)
 public class VideoPlayer {
 
     private static final String CLASSTAG = VideoPlayer.class.getSimpleName();
 
-    private static final String USER_AGENT = "ImaSamplePlayer (Linux;Android "
-            + Build.VERSION.RELEASE + ") ImaSample/1.0";
-
-    private Context context;
+    private final Context context;
 
     private ExoPlayer player;
-    private PlayerView playerView;
+    private final PlayerView playerView;
     private VideoPlayerCallback playerCallback;
 
-    private Timeline.Period period = new Period();
+    @C.ContentType
+    private int currentlyPlayingStreamType = C.CONTENT_TYPE_OTHER;
 
-    private String streamURL;
-    private Boolean isStreamRequested;
+    private String streamUrl;
+    private Boolean streamRequested;
     private boolean canSeek;
 
     public VideoPlayer(Context context, PlayerView playerView) {
         this.context = context;
         this.playerView = playerView;
-        isStreamRequested = false;
+        streamRequested = false;
         canSeek = true;
     }
 
     private void initPlayer() {
         release();
 
-        player = new ExoPlayer.Builder(this.context).build();
-        playerView.setPlayer(player);
-        player.setPlayWhenReady(true);
+        player = new ExoPlayer.Builder(context).build();
+        playerView.setPlayer(
+                new ForwardingPlayer(player) {
+                    @Override
+                    public void seekToDefaultPosition() {
+                        seekToDefaultPosition(getCurrentMediaItemIndex());
+                    }
 
-//        playerView.setControlDispatcher(new ControlDispatcher() {
-//            @Override
-//            public boolean dispatchSetPlayWhenReady(Player player, boolean playWhenReady) {
-//                player.setPlayWhenReady(playWhenReady);
-//                return true;
-//            }
-//
-//            @Override
-//            public boolean dispatchSeekTo(Player player, int windowIndex, long positionMs) {
-//                if (canSeek) {
-//                    if (playerCallback != null) {
-//                        playerCallback.onSeek(windowIndex, positionMs);
-//                    } else {
-//                        player.seekTo(windowIndex, positionMs);
-//                    }
-//                }
-//                return true;
-//            }
-//
-//            @Override
-//            public boolean dispatchSetRepeatMode(Player player, int repeatMode) {
-//                return false;
-//            }
-//
-//            @Override
-//            public boolean dispatchSetShuffleModeEnabled(Player player,
-//                                                         boolean shuffleModeEnabled) {
-//                return false;
-//            }
-//
-//            @Override
-//            public boolean dispatchStop(Player player, boolean reset) {
-//                return false;
-//            }
-//        });
+                    @Override
+                    public void seekToDefaultPosition(int windowIndex) {
+                        seekTo(windowIndex, /* positionMs= */ C.TIME_UNSET);
+                    }
+
+                    @Override
+                    public void seekTo(long positionMs) {
+                        seekTo(getCurrentMediaItemIndex(), positionMs);
+                    }
+
+                    @Override
+                    public void seekTo(int windowIndex, long positionMs) {
+                        if (canSeek) {
+                            if (playerCallback != null) {
+                                playerCallback.onSeek(windowIndex, positionMs);
+                            } else {
+                                super.seekTo(windowIndex, positionMs);
+                            }
+                        }
+                    }
+                });
     }
 
     public void play() {
-        play(Player.REPEAT_MODE_OFF, 1);
-    }
-
-    @OptIn(markerClass = UnstableApi.class)
-    public void play(int repeatMode, int volume) {
-        if (isStreamRequested) {
+        if (streamRequested) {
             // Stream requested, just resume.
             player.setPlayWhenReady(true);
             return;
         }
-
         initPlayer();
 
-        player.setRepeatMode(repeatMode);
-        player.setVolume(volume);
-
         DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
-        int type = Util.inferContentType(Uri.parse(streamURL));
-        MediaItem mediaItem = MediaItem.fromUri(Uri.parse(streamURL));
+        int type = Util.inferContentType(Uri.parse(streamUrl));
+        MediaItem mediaItem = MediaItem.fromUri(Uri.parse(streamUrl));
         MediaSource mediaSource;
         switch (type) {
             case C.CONTENT_TYPE_HLS:
-                mediaSource = new HlsMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(mediaItem);
+                mediaSource = new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
                 break;
             case C.CONTENT_TYPE_DASH:
-                mediaSource = new DashMediaSource.Factory(new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
-                        .createMediaSource(mediaItem);
+                mediaSource =
+                        new DashMediaSource.Factory(
+                                new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
+                                .createMediaSource(mediaItem);
                 break;
             case C.CONTENT_TYPE_OTHER:
                 mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
                 break;
             default:
-                Log.e(CLASSTAG, "Error! Invalid Media Source, exiting");
-                return;
+                throw new UnsupportedOperationException("Unknown stream type.");
         }
 
-        player.prepare(mediaSource);
+        player.setMediaSource(mediaSource);
+        player.prepare();
+
+        // Register for ID3 events.
+        player.addListener(
+                new Player.Listener() {
+                    @Override
+                    public void onMetadata(Metadata metadata) {
+                        for (int i = 0; i < metadata.length(); i++) {
+                            Metadata.Entry entry = metadata.get(i);
+                            if (entry instanceof TextInformationFrame) {
+                                TextInformationFrame textFrame = (TextInformationFrame) entry;
+                                if ("TXXX".equals(textFrame.id)) {
+                                    Log.d(CLASSTAG, "Received user text: " + textFrame.value);
+                                    if (playerCallback != null) {
+                                        playerCallback.onUserTextReceived(textFrame.value);
+                                    }
+                                }
+                            } else if (entry instanceof EventMessage) {
+                                EventMessage eventMessage = (EventMessage) entry;
+                                String eventMessageValue = new String(eventMessage.messageData);
+                                Log.d(CLASSTAG, "Received user text: " + eventMessageValue);
+                                if (playerCallback != null) {
+                                    playerCallback.onUserTextReceived(eventMessageValue);
+                                }
+                            }
+                        }
+                    }
+                });
 
         player.setPlayWhenReady(true);
-        isStreamRequested = true;
+        streamRequested = true;
     }
 
     public void pause() {
@@ -169,28 +179,27 @@ public class VideoPlayer {
         playerView.setVisibility(View.VISIBLE);
     }
 
-    void seekTo(SeekPosition seekPosition) {
-        player.seekTo(seekPosition.getMilliseconds());
+    public void seekTo(long timeMs) {
+        player.seekTo(timeMs);
     }
 
-    void seekTo(int windowIndex, SeekPosition seekPosition) {
-        player.seekTo(windowIndex, seekPosition.getMilliseconds());
+    public void seekTo(int windowIndex, long positionMs) {
+        player.seekTo(windowIndex, positionMs);
     }
 
     public void release() {
         if (player != null) {
             player.release();
             player = null;
-            isStreamRequested = false;
+            streamRequested = false;
         }
     }
 
-    public void setStreamURL(String streamURL) {
-        this.streamURL = streamURL;
-        isStreamRequested = false; //request new stream on play
+    public void setStreamUrl(String streamUrl) {
+        this.streamUrl = streamUrl;
+        streamRequested = false; // request new stream on play
     }
 
-    @OptIn(markerClass = UnstableApi.class)
     public void enableControls(boolean doEnable) {
         if (doEnable) {
             playerView.showController();
@@ -209,7 +218,7 @@ public class VideoPlayer {
     }
 
     public boolean isStreamRequested() {
-        return isStreamRequested;
+        return streamRequested;
     }
 
     // Methods for exposing player information.
@@ -217,25 +226,45 @@ public class VideoPlayer {
         playerCallback = callback;
     }
 
-    long getCurrentPositionPeriod() {
-        if (player == null) return 0;
-
-        // Adjust position to be relative to start of period rather than window, to account for DVR
-        // window.
-        long position = player.getCurrentPosition();
-        Timeline currentTimeline = player.getCurrentTimeline();
-        if (!currentTimeline.isEmpty()) {
-            position -= currentTimeline.getPeriod(player.getCurrentPeriodIndex(), period)
-                    .getPositionInWindowMs();
-        }
-        return position;
+    public void setCanSeek(boolean canSeek) {
+        this.canSeek = canSeek;
     }
 
-    int getVolume() {
+    /**
+     * Returns current position of the playhead in milliseconds for DASH and HLS stream.
+     */
+    public long getCurrentPositionMs() {
+        if (player == null) {
+            return 0;
+        }
+
+        Timeline currentTimeline = player.getCurrentTimeline();
+        if (currentTimeline.isEmpty()) {
+            return player.getCurrentPosition();
+        }
+        Timeline.Window window = new Timeline.Window();
+        player.getCurrentTimeline().getWindow(player.getCurrentMediaItemIndex(), window);
+        if (window.isLive()) {
+            return player.getCurrentPosition() + window.windowStartTimeMs;
+        } else {
+            return player.getCurrentPosition();
+        }
+    }
+
+    public void enableRepeatOnce() {
+        if (player != null) player.setRepeatMode(Player.REPEAT_MODE_ONE);
+    }
+
+    public void setVolume(float volume) {
+        if (player != null) player.setVolume(volume);
+    }
+
+    public int getVolume() {
         return player == null ? 0 : Math.round(player.getVolume() * 100);
     }
 
-    long getDuration() {
+
+    public long getDuration() {
         return player == null ? 0 : player.getDuration();
     }
 }
