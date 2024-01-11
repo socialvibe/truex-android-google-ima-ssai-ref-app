@@ -165,7 +165,7 @@ public class VideoPlayer {
         playerView.setVisibility(View.GONE);
     }
 
-    public void display() {
+    public void show() {
         playerView.setVisibility(View.VISIBLE);
     }
 

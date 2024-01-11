@@ -345,7 +345,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         truexAdManager = null;
 
         // Display and resume the stream
-        videoPlayer.display();
+        videoPlayer.show();
         videoPlayer.play();
 
         // If we did not seek past the ad break -- stop here
