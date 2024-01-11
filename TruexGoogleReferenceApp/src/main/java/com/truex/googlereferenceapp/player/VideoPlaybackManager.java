@@ -48,7 +48,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
 
     private long snapBackTimeMs; // Stream time to snap back to, in milliseconds.
 
-    private boolean didSeekPastAdBreak = true;
+    private boolean didSeekPastAdBreak;
 
     // The renderer that drives the true[X] Engagement experience
     private TruexAdManager truexAdManager;

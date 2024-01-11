@@ -73,7 +73,7 @@ public class HomeViewFragment extends DaggerFragment {
         }, (Exception e) -> {
             StreamConfiguration fallbackStreamConfiguration = getFallbackStreamConfiguration();
             if (fallbackStreamConfiguration != null) {
-                updateCurrentStream(getFallbackStreamConfiguration());
+                updateCurrentStream(fallbackStreamConfiguration);
             }
         });
     }
@@ -125,6 +125,8 @@ public class HomeViewFragment extends DaggerFragment {
     }
 
     private void onPlayButtonClicked() {
+        previewPlayer.release();
+
         Bundle arguments = new Bundle();
         arguments.putParcelable(StreamConfiguration.class.getSimpleName(), currentStreamConfiguration);
 

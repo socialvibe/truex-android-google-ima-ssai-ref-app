@@ -68,6 +68,7 @@ public class VideoPlayer {
         this.playerView = playerView;
         streamRequested = false;
         canSeek = true;
+        initPlayer();
     }
 
     private void initPlayer() {
@@ -105,12 +106,15 @@ public class VideoPlayer {
     }
 
     public void play() {
+        if (player == null) {
+            initPlayer();
+        }
+
         if (streamRequested) {
             // Stream requested, just resume.
             player.setPlayWhenReady(true);
             return;
         }
-        initPlayer();
 
         DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
         int type = Util.inferContentType(Uri.parse(streamUrl));
