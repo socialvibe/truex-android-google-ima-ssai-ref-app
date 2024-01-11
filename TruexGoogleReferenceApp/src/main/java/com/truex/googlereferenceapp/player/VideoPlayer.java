@@ -195,9 +195,11 @@ public class VideoPlayer {
         if (doEnable) {
             playerView.showController();
             playerView.setControllerAutoShow(true);
+            playerView.setClickable(true);
         } else {
             playerView.hideController();
             playerView.setControllerAutoShow(false);
+            playerView.setClickable(false);
         }
         canSeek = doEnable;
     }
