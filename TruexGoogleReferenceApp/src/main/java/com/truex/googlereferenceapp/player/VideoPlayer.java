@@ -56,9 +56,6 @@ public class VideoPlayer {
     private final PlayerView playerView;
     private VideoPlayerCallback playerCallback;
 
-    @C.ContentType
-    private int currentlyPlayingStreamType = C.CONTENT_TYPE_OTHER;
-
     private String streamUrl;
     private Boolean streamRequested;
     private boolean canSeek;
