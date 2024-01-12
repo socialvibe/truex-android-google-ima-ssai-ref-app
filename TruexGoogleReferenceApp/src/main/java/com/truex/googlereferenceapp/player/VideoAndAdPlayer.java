@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
-    private static final String CLASSTAG = VideoPlaybackManager.class.getSimpleName();
+public class VideoAndAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
+    private static final String CLASSTAG = VideoAndAdPlayer.class.getSimpleName();
 
     // The stream configuration for the selected content
     // The Video ID and Content ID are used to initialize the stream with the IMA SDK
@@ -44,7 +44,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     private StreamDisplayContainer displayContainer;
     private StreamManager streamManager;
     private List<VideoStreamPlayer.VideoStreamPlayerCallback> playerCallbacks;
-    private Listener listener;
+    private AdFailedListener adFailedListener;
 
     private long snapBackTimeMs; // Stream time to snap back to, in milliseconds.
 
@@ -59,9 +59,9 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
      * @param videoPlayer the underlying video player.
      * @param adUiContainer ViewGroup in which to display the ad's UI.
      */
-    VideoPlaybackManager(Context context, VideoPlayer videoPlayer,
-                                StreamConfiguration streamConfiguration,
-                                ViewGroup adUiContainer) {
+    VideoAndAdPlayer(Context context, VideoPlayer videoPlayer,
+                     StreamConfiguration streamConfiguration,
+                     ViewGroup adUiContainer) {
         this.videoPlayer = videoPlayer;
         this.streamConfiguration = streamConfiguration;
         this.context = context;
@@ -205,11 +205,11 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     }
 
     /**
-     * Set the listener
-     * @param listener the listener
+     * Set the ad failed listener
+     * @param adFailedListener the listener
      */
-    void setListener(Listener listener) {
-        this.listener = listener;
+    void setAdFailedListener(AdFailedListener adFailedListener) {
+        this.adFailedListener = adFailedListener;
     }
 
     /**
@@ -422,7 +422,10 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     @Override
     public void onAdError(AdErrorEvent event) {
         Log.i(CLASSTAG, String.format("Ad Error: %s", event.getError().getMessage()));
-        listener.onVideoPlaybackFailed();
+        this.release();
+        if (adFailedListener != null) {
+            adFailedListener.onVideoPlaybackFailed();
+        }
     }
 
     /** AdEventListener implementation **/
@@ -457,7 +460,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         streamManager.init(adsRenderingSettings);
     }
 
-    public interface Listener {
+    public interface AdFailedListener {
         void onVideoPlaybackFailed();
     }
 }
