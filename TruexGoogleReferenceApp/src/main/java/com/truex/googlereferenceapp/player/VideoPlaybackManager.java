@@ -165,10 +165,9 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
             videoPlayer = null;
         }
 
-        // Clean-up the display container
-        if (displayContainer != null) {
-            displayContainer.destroy();
-            displayContainer = null;
+        if (adsLoader != null) {
+            adsLoader.release();
+            adsLoader = null;
         }
     }
 
