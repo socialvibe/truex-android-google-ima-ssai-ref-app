@@ -204,13 +204,11 @@ public class VideoPlayer {
     public void enableControls(boolean doEnable) {
         if (doEnable) {
             playerView.showController();
-            playerView.setControllerAutoShow(true);
-            playerView.setClickable(true);
         } else {
             playerView.hideController();
-            playerView.setControllerAutoShow(false);
-            playerView.setClickable(false);
         }
+        playerView.setControllerAutoShow(doEnable);
+        playerView.setUseController(doEnable);
         canSeek = doEnable;
     }
 
