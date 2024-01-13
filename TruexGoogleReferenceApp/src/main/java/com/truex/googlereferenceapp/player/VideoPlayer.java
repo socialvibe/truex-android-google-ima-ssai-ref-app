@@ -42,6 +42,8 @@ import androidx.media3.extractor.metadata.emsg.EventMessage;
 import androidx.media3.extractor.metadata.id3.TextInformationFrame;
 import androidx.media3.ui.PlayerView;
 
+import com.google.ads.interactivemedia.v3.api.StreamManager;
+
 /**
  * A video player that plays HLS or DASH streams using ExoPlayer.
  */
@@ -59,6 +61,8 @@ public class VideoPlayer {
     private String streamUrl;
     private Boolean streamRequested;
     private boolean canSeek;
+
+    private StreamManager streamManager;
 
     public VideoPlayer(Context context, PlayerView playerView) {
         this.context = context;
@@ -91,13 +95,32 @@ public class VideoPlayer {
 
                     @Override
                     public void seekTo(int windowIndex, long positionMs) {
+                        long seekPos = positionMs;
                         if (canSeek) {
+                            if (streamManager != null) {
+                                // Convert back to raw stream position for actual seek.
+                                seekPos = streamManager.getStreamTimeMsForContentTimeMs(positionMs);
+                            }
                             if (playerCallback != null) {
-                                playerCallback.onSeek(windowIndex, positionMs);
+                                playerCallback.onSeek(windowIndex, seekPos);
                             } else {
-                                super.seekTo(windowIndex, positionMs);
+                                super.seekTo(windowIndex, seekPos);
                             }
                         }
+                    }
+
+                    @Override
+                    public long getContentPosition() {
+                        // Display content position instead of raw stream position to player view.
+                        long streamPos = player.getCurrentPosition();
+                        return streamManager != null ? streamManager.getContentTimeMsForStreamTimeMs(streamPos) : streamPos;
+                    }
+
+                    @Override
+                    public long getContentDuration() {
+                        // Display content duration instead of raw stream position to player view.
+                        long streamDuration = player.getDuration();
+                        return streamManager != null ? streamManager.getContentTimeMsForStreamTimeMs(streamDuration) : streamDuration;
                     }
                 });
     }
@@ -201,6 +224,14 @@ public class VideoPlayer {
         streamRequested = false; // request new stream on play
     }
 
+    public void setStreamManager(StreamManager toManager) {
+        this.streamManager = toManager;
+    }
+
+    public boolean isPlayingAd() {
+        return streamManager != null && streamManager.getAdProgressInfo() != null;
+    }
+
     public void enableControls(boolean doEnable) {
         if (doEnable) {
             playerView.showController();
@@ -233,9 +264,7 @@ public class VideoPlayer {
      * Returns current position of the playhead in milliseconds for DASH and HLS stream.
      */
     public long getCurrentPositionMs() {
-        if (player == null) {
-            return 0;
-        }
+        if (player == null) return 0;
 
         Timeline currentTimeline = player.getCurrentTimeline();
         if (currentTimeline.isEmpty()) {
@@ -261,7 +290,6 @@ public class VideoPlayer {
     public int getVolume() {
         return player == null ? 0 : Math.round(player.getVolume() * 100);
     }
-
 
     public long getDuration() {
         return player == null ? 0 : player.getDuration();

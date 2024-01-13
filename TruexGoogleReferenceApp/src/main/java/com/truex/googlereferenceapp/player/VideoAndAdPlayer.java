@@ -449,6 +449,7 @@ public class VideoAndAdPlayer implements PlaybackHandler, AdEvent.AdEventListene
     @Override
     public void onAdsManagerLoaded(AdsManagerLoadedEvent event) {
         streamManager = event.getStreamManager();
+        //videoPlayer.setStreamManager(streamManager); // @TODO not yet
 
         // Create the ads rendering settings
         AdsRenderingSettings adsRenderingSettings = sdkFactory.createAdsRenderingSettings();
