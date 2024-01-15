@@ -2,6 +2,7 @@ package com.truex.googlereferenceapp.home;
 
 import static com.truex.googlereferenceapp.home.StreamConfiguration.requestStreamConfigurations;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,14 +12,26 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
 import androidx.fragment.app.Fragment;
+import androidx.media3.common.C;
+import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.common.util.Util;
+import androidx.media3.datasource.DataSource;
+import androidx.media3.datasource.DefaultDataSource;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.dash.DashMediaSource;
+import androidx.media3.exoplayer.dash.DefaultDashChunkSource;
+import androidx.media3.exoplayer.hls.HlsMediaSource;
+import androidx.media3.exoplayer.source.MediaSource;
+import androidx.media3.exoplayer.source.ProgressiveMediaSource;
 import androidx.media3.ui.PlayerView;
 
 import com.bumptech.glide.Glide;
 import com.truex.googlereferenceapp.R;
 import com.truex.googlereferenceapp.player.PlayerViewFragment;
-import com.truex.googlereferenceapp.player.VideoPlayer;
 import com.truex.googlereferenceapp.util.FileUtils;
 
 import org.json.JSONException;
@@ -31,6 +44,7 @@ import javax.inject.Inject;
 import dagger.android.support.DaggerFragment;
 import okhttp3.OkHttpClient;
 
+@OptIn(markerClass = UnstableApi.class)
 public class HomeViewFragment extends DaggerFragment {
     private static String CLASSTAG = HomeViewFragment.class.getSimpleName();
 
@@ -44,7 +58,7 @@ public class HomeViewFragment extends DaggerFragment {
     private TextView streamDescription;
     private ImageView streamCover;
     private PlayerView previewPlayerView;
-    private VideoPlayer previewPlayer;
+    private ExoPlayer previewPlayer;
     private View playButton;
 
     @Override
@@ -64,8 +78,12 @@ public class HomeViewFragment extends DaggerFragment {
         previewPlayerView = getView().findViewById(R.id.player_view);
         playButton = getView().findViewById(R.id.play_button);
 
-        previewPlayer = new VideoPlayer(getContext(), previewPlayerView);
-        previewPlayer.enableControls(false);
+
+        previewPlayer = new ExoPlayer.Builder(getContext()).build();
+        previewPlayerView.setPlayer(previewPlayer);
+
+        previewPlayerView.hideController();
+        previewPlayerView.setUseController(false);
 
         String streamsConfigURL = getResources().getString(R.string.streams_config_url);
         requestStreamConfigurations(httpClient, streamsConfigURL, (List<StreamConfiguration> streamConfigurations) -> {
@@ -110,10 +128,11 @@ public class HomeViewFragment extends DaggerFragment {
                     .into(streamCover);
 
             // Update and play the preview video
-            previewPlayer.setStreamUrl(currentStreamConfiguration.getPreviewURL());
-            previewPlayer.enableRepeatOnce();
+            previewPlayer.setMediaSource(getPreviewMediaSource(currentStreamConfiguration.getPreviewURL()));
+            previewPlayer.prepare();
             previewPlayer.setVolume(0);
-            previewPlayer.play();
+            previewPlayer.setRepeatMode(Player.REPEAT_MODE_ONE);
+            previewPlayer.setPlayWhenReady(true);
 
             // Set-up the Play Button
             playButton.setOnClickListener((View v) -> onPlayButtonClicked());
@@ -148,5 +167,31 @@ public class HomeViewFragment extends DaggerFragment {
             Log.d(CLASSTAG, "Failed to parse fallback stream configuration");
         }
         return null;
+    }
+
+    @OptIn(markerClass = UnstableApi.class)
+    public MediaSource getPreviewMediaSource(String streamUrl) {
+        DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(getContext());
+        Uri previewUri = Uri.parse(streamUrl);
+        int type = Util.inferContentType(previewUri);
+        MediaItem mediaItem = MediaItem.fromUri(previewUri);
+        MediaSource mediaSource;
+        switch (type) {
+            case C.CONTENT_TYPE_HLS:
+                mediaSource = new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+                break;
+            case C.CONTENT_TYPE_DASH:
+                mediaSource =
+                        new DashMediaSource.Factory(
+                                new DefaultDashChunkSource.Factory(dataSourceFactory), dataSourceFactory)
+                                .createMediaSource(mediaItem);
+                break;
+            case C.CONTENT_TYPE_OTHER:
+                mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+                break;
+            default:
+                throw new UnsupportedOperationException("Unknown stream type.");
+        }
+        return mediaSource;
     }
 }
