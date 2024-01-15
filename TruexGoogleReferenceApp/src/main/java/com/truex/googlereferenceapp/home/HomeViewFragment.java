@@ -99,11 +99,13 @@ public class HomeViewFragment extends DaggerFragment {
     @Override
     public void onPause() {
         super.onPause();
+        if (previewPlayer != null) previewPlayer.pause();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        if (previewPlayer != null) previewPlayer.play();
     }
 
     @Override
