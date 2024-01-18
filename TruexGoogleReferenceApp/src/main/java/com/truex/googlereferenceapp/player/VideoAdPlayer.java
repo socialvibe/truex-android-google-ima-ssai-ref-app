@@ -10,6 +10,7 @@ import com.google.ads.interactivemedia.v3.api.AdEvent;
 import com.google.ads.interactivemedia.v3.api.AdPodInfo;
 import com.google.ads.interactivemedia.v3.api.AdProgressInfo;
 import com.google.ads.interactivemedia.v3.api.AdsLoader;
+import com.google.ads.interactivemedia.v3.api.AdsManager;
 import com.google.ads.interactivemedia.v3.api.AdsManagerLoadedEvent;
 import com.google.ads.interactivemedia.v3.api.AdsRenderingSettings;
 import com.google.ads.interactivemedia.v3.api.CuePoint;
@@ -27,8 +28,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class VideoAndAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
-    private static final String CLASSTAG = VideoAndAdPlayer.class.getSimpleName();
+public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
+    private static final String CLASSTAG = VideoAdPlayer.class.getSimpleName();
 
     // The stream configuration for the selected content
     // The Video ID and Content ID are used to initialize the stream with the IMA SDK
@@ -59,9 +60,9 @@ public class VideoAndAdPlayer implements PlaybackHandler, AdEvent.AdEventListene
      * @param videoPlayer the underlying video player.
      * @param adUiContainer ViewGroup in which to display the ad's UI.
      */
-    VideoAndAdPlayer(Context context, VideoPlayer videoPlayer,
-                     StreamConfiguration streamConfiguration,
-                     ViewGroup adUiContainer) {
+    VideoAdPlayer(Context context, VideoPlayer videoPlayer,
+                  StreamConfiguration streamConfiguration,
+                  ViewGroup adUiContainer) {
         this.videoPlayer = videoPlayer;
         this.streamConfiguration = streamConfiguration;
         this.context = context;
@@ -449,6 +450,7 @@ public class VideoAndAdPlayer implements PlaybackHandler, AdEvent.AdEventListene
     @Override
     public void onAdsManagerLoaded(AdsManagerLoadedEvent event) {
         streamManager = event.getStreamManager();
+        AdsManager adManager = event.getAdsManager();
         //videoPlayer.setStreamManager(streamManager); // @TODO not yet
 
         // Create the ads rendering settings

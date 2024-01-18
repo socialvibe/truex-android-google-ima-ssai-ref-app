@@ -14,7 +14,7 @@ public class PlayerViewFragment extends Fragment {
 
     protected VideoPlayer videoPlayer;
 
-    protected VideoAndAdPlayer videoAndAdPlayer;
+    protected VideoAdPlayer videoAndAdPlayer;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -34,7 +34,7 @@ public class PlayerViewFragment extends Fragment {
 
         // Set-up the video playback manager
         videoPlayer = new VideoPlayer(getContext(), getView().findViewById(R.id.player_view));
-        videoAndAdPlayer = new VideoAndAdPlayer(getContext(), videoPlayer, streamConfiguration, adUiContainer);
+        videoAndAdPlayer = new VideoAdPlayer(getContext(), videoPlayer, streamConfiguration, adUiContainer);
 
         // Begin playback of the stream
         videoAndAdPlayer.requestAndPlayStream();
