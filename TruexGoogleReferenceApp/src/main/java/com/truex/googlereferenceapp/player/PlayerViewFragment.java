@@ -8,8 +8,10 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.fragment.app.Fragment;
+import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.common.util.Util;
 import androidx.media3.datasource.DataSource;
 import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -31,6 +33,9 @@ import com.google.ads.interactivemedia.v3.api.AdProgressInfo;
 import com.truex.googlereferenceapp.R;
 import com.truex.googlereferenceapp.home.StreamConfiguration;
 import com.truex.googlereferenceapp.player.ads.TruexAdManager;
+
+import java.util.Formatter;
+import java.util.Locale;
 
 @OptIn(markerClass = UnstableApi.class)
 public class PlayerViewFragment extends Fragment implements PlaybackHandler {
@@ -89,6 +94,13 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
         super.onDestroy();
     }
 
+    private void logPosition(String context, long position) {
+        StringBuilder formatBuilder = new StringBuilder();
+        Formatter formatter = new Formatter(formatBuilder, Locale.getDefault());
+        String timeDisplay = Util.getStringForTime(formatBuilder, formatter, position);
+        Log.i(CLASSTAG, context + ": " + timeDisplay);
+    }
+
     private void initializePlayer() {
         if (player != null) return;
 
@@ -118,8 +130,39 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
 
         // Create a SimpleExoPlayer and set it as the player for content and ads.
         player = new ExoPlayer.Builder(context).setMediaSourceFactory(mediaSourceFactory).build();
-        playerView.setPlayer(player);
-        adsLoader.setPlayer(player);
+
+        ForwardingPlayer playerWrapper = new ForwardingPlayer(player) {
+            @Override
+            public long getContentBufferedPosition() {
+                long result = super.getContentBufferedPosition();
+                logPosition("getContentBufferedPosition", result);
+                return result;
+            }
+
+            @Override
+            public long getContentDuration() {
+                long result = super.getContentDuration();
+                logPosition("getContentDuration", result);
+                return result;
+            }
+
+            @Override
+            public long getContentPosition() {
+                long result = super.getContentPosition();
+                logPosition("getContentPosition", result);
+                return result;
+            }
+
+            @Override
+            public long getDuration() {
+                long result = super.getDuration();
+                logPosition("getDuration", result);
+                return result;
+            }
+        };
+
+        playerView.setPlayer(playerWrapper);
+        adsLoader.setPlayer(playerWrapper);
 
         // Build an IMA SSAI media item to prepare the player with.
         Uri ssaiLiveUri =
