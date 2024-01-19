@@ -82,10 +82,12 @@ public class VideoPlayer {
     }
 
     private long streamToContentMs(long position) {
+        if (position == C.TIME_UNSET || position == 0) return position;
         return streamManager == null ? position : streamManager.getContentTimeMsForStreamTimeMs(position);
     }
 
     private long contentToStreamMs(long position) {
+        if (position == C.TIME_UNSET || position == 0) return position;
         return streamManager == null ? position : streamManager.getStreamTimeMsForContentTimeMs(position);
     }
 
@@ -275,10 +277,9 @@ public class VideoPlayer {
 
     public void setAdsTimeline(StreamManager toManager) {
         this.streamManager = toManager;
-        if (this.streamManager == toManager) return;
         if (toManager == null) {
             this.timelineWithAds = null;
-        } else {
+        } else if (streamManager != toManager) {
             Timeline streamTimeline = player.getCurrentTimeline();
             this.timelineWithAds = new ForwardingTimeline(streamTimeline) {
                 @Override
