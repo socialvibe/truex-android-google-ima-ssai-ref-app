@@ -20,8 +20,11 @@ import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 
 import androidx.annotation.OptIn;
+import androidx.appcompat.view.menu.ShowableListMenu;
+import androidx.appcompat.widget.ForwardingListener;
 import androidx.media3.common.C;
 import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
@@ -36,13 +39,18 @@ import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.dash.DashMediaSource;
 import androidx.media3.exoplayer.dash.DefaultDashChunkSource;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
+import androidx.media3.exoplayer.source.ForwardingTimeline;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
+import androidx.media3.exoplayer.source.SinglePeriodTimeline;
 import androidx.media3.extractor.metadata.emsg.EventMessage;
 import androidx.media3.extractor.metadata.id3.TextInformationFrame;
 import androidx.media3.ui.PlayerView;
 
+import com.google.ads.interactivemedia.v3.api.CuePoint;
 import com.google.ads.interactivemedia.v3.api.StreamManager;
+
+import java.util.List;
 
 /**
  * A video player that plays HLS or DASH streams using ExoPlayer.
@@ -63,6 +71,7 @@ public class VideoPlayer {
     private boolean canSeek;
 
     private StreamManager streamManager;
+    private Timeline timelineWithAds;
 
     public VideoPlayer(Context context, PlayerView playerView) {
         this.context = context;
@@ -70,6 +79,14 @@ public class VideoPlayer {
         streamRequested = false;
         canSeek = true;
         initPlayer();
+    }
+
+    private long streamToContentMs(long position) {
+        return streamManager == null ? position : streamManager.getContentTimeMsForStreamTimeMs(position);
+    }
+
+    private long contentToStreamMs(long position) {
+        return streamManager == null ? position : streamManager.getStreamTimeMsForContentTimeMs(position);
     }
 
     private void initPlayer() {
@@ -95,33 +112,65 @@ public class VideoPlayer {
 
                     @Override
                     public void seekTo(int windowIndex, long positionMs) {
-                        long seekPos = positionMs;
-                        if (canSeek) {
-                            if (streamManager != null) {
-                                // Convert back to raw stream position for actual seek.
-                                seekPos = streamManager.getStreamTimeMsForContentTimeMs(positionMs);
-                            }
-                            if (playerCallback != null) {
-                                playerCallback.onSeek(windowIndex, seekPos);
-                            } else {
-                                super.seekTo(windowIndex, seekPos);
-                            }
+                        if (!canSeek) return;
+                        long seekPos = contentToStreamMs(positionMs);
+                        if (playerCallback != null) {
+                            playerCallback.onSeek(windowIndex, seekPos);
+                        } else {
+                            super.seekTo(windowIndex, seekPos);
                         }
+                    }
+
+                    @Override
+                    public Timeline getCurrentTimeline() {
+                        if (timelineWithAds != null) return timelineWithAds;
+                        return super.getCurrentTimeline();
                     }
 
                     @Override
                     public long getContentPosition() {
                         // Display content position instead of raw stream position to player view.
-                        long streamPos = player.getCurrentPosition();
-                        return streamManager != null ? streamManager.getContentTimeMsForStreamTimeMs(streamPos) : streamPos;
+                        return streamToContentMs(super.getContentPosition());
                     }
 
                     @Override
                     public long getContentDuration() {
                         // Display content duration instead of raw stream position to player view.
-                        long streamDuration = player.getDuration();
-                        return streamManager != null ? streamManager.getContentTimeMsForStreamTimeMs(streamDuration) : streamDuration;
+                        return streamToContentMs(player.getContentDuration());
                     }
+
+                    @Override
+                    public long getContentBufferedPosition() {
+                        return streamToContentMs(player.getContentBufferedPosition());
+                    }
+
+                    @Override
+                    public long getCurrentPosition() {
+                        return streamToContentMs(player.getCurrentPosition());
+                    }
+
+                    @Override
+                    public long getDuration() {
+                        return streamToContentMs(player.getDuration());
+                    }
+
+                    @Override
+                    public long getBufferedPosition() {
+                        return streamToContentMs(player.getBufferedPosition());
+                    }
+
+                    @Override
+                    public long getTotalBufferedDuration() {
+                        return streamToContentMs(player.getTotalBufferedDuration());
+                    }
+
+//                    @Override
+//                    public void addListener(Listener listener) {
+//                        ForwardingListener forwardingListener = new ForwardingListener(this, listener) {
+//                        };
+//                        player.addListener();
+//                        super.addListener(listener);
+//                    }
                 });
     }
 
@@ -224,8 +273,51 @@ public class VideoPlayer {
         streamRequested = false; // request new stream on play
     }
 
-    public void setStreamManager(StreamManager toManager) {
+    public void setAdsTimeline(StreamManager toManager) {
         this.streamManager = toManager;
+        if (this.streamManager == toManager) return;
+        if (toManager == null) {
+            this.timelineWithAds = null;
+        } else {
+            Timeline streamTimeline = player.getCurrentTimeline();
+            this.timelineWithAds = new ForwardingTimeline(streamTimeline) {
+                @Override
+                public Window getWindow(int windowIndex, Window window, long defaultPositionProjectionUs) {
+                    Window result = super.getWindow(windowIndex, window, defaultPositionProjectionUs);
+                    if (result.durationUs != C.TIME_UNSET) {
+                        result.durationUs = Util.msToUs(streamToContentMs(player.getDuration()));
+                    }
+                    return result;
+                }
+
+                @Override
+                public Period getPeriod(int periodIndex, Period period, boolean setIds) {
+                    Period result = super.getPeriod(periodIndex, period, setIds);
+                    if (result.durationUs != C.TIME_UNSET) {
+                        result.durationUs = Util.msToUs(streamToContentMs(player.getDuration()));
+                    }
+                    return result;
+                }
+            };
+        }
+        refreshAdMarkers();
+    }
+
+    public void refreshAdMarkers() {
+        long[] extraAdGroupTimesMs = null;
+        boolean[] extraPlayedAdGroups = null;
+        if (streamManager != null) {
+            // Set up the ad markers.
+            List<CuePoint> adBreaks = streamManager.getCuePoints();
+            extraAdGroupTimesMs = new long[adBreaks.size()];
+            extraPlayedAdGroups = new boolean[adBreaks.size()];
+            for (int i = 0; i < adBreaks.size(); i++) {
+                CuePoint adBreak = adBreaks.get(i);
+                extraAdGroupTimesMs[i] = streamManager.getContentTimeMsForStreamTimeMs(adBreak.getStartTimeMs());
+                extraPlayedAdGroups[i] = adBreak.isPlayed();
+            }
+        }
+        playerView.setExtraAdGroupMarkers(extraAdGroupTimesMs, extraPlayedAdGroups);
     }
 
     public boolean isPlayingAd() {

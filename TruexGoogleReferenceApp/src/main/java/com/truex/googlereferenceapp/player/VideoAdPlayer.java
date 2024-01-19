@@ -4,6 +4,8 @@ import android.content.Context;
 import android.util.Log;
 import android.view.ViewGroup;
 
+import androidx.media3.ui.PlayerView;
+
 import com.google.ads.interactivemedia.v3.api.Ad;
 import com.google.ads.interactivemedia.v3.api.AdErrorEvent;
 import com.google.ads.interactivemedia.v3.api.AdEvent;
@@ -45,7 +47,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
     private StreamDisplayContainer displayContainer;
     private StreamManager streamManager;
     private List<VideoStreamPlayer.VideoStreamPlayerCallback> playerCallbacks;
-    private AdFailedListener adFailedListener;
 
     private long snapBackTimeMs; // Stream time to snap back to, in milliseconds.
 
@@ -57,13 +58,14 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
     /**
      * Creates a new VideoPlaybackManager that implements IMA direct-ad-insertion.
      * @param context the app's context.
-     * @param videoPlayer the underlying video player.
+     * @param playerView the playerview videos will be displayed in
      * @param adUiContainer ViewGroup in which to display the ad's UI.
      */
-    VideoAdPlayer(Context context, VideoPlayer videoPlayer,
+    VideoAdPlayer(Context context,
                   StreamConfiguration streamConfiguration,
+                  PlayerView playerView,
                   ViewGroup adUiContainer) {
-        this.videoPlayer = videoPlayer;
+        this.videoPlayer = new VideoPlayer(context, playerView);
         this.streamConfiguration = streamConfiguration;
         this.context = context;
         this.adUiContainer = adUiContainer;
@@ -206,14 +208,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
     }
 
     /**
-     * Set the ad failed listener
-     * @param adFailedListener the listener
-     */
-    void setAdFailedListener(AdFailedListener adFailedListener) {
-        this.adFailedListener = adFailedListener;
-    }
-
-    /**
      * Creates a Stream Request from the requested stream configuration
      * This method also sets up the Display Container for video playback
      * @return the new Stream Request that will be used to begin playback
@@ -336,6 +330,8 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
                     videoPlayer.seekTo(Math.round(snapBackTimeMs));
                 }
                 snapBackTimeMs = 0;
+
+                videoPlayer.refreshAdMarkers();
             }
 
             @Override
@@ -424,9 +420,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
     public void onAdError(AdErrorEvent event) {
         Log.i(CLASSTAG, String.format("Ad Error: %s", event.getError().getMessage()));
         this.release();
-        if (adFailedListener != null) {
-            adFailedListener.onVideoPlaybackFailed();
-        }
     }
 
     /** AdEventListener implementation **/
@@ -439,6 +432,9 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
 
         Log.i(CLASSTAG, String.format("Event: %s", event.getType()));
         switch (event.getType()) {
+            case CUEPOINTS_CHANGED:
+                videoPlayer.setAdsTimeline(streamManager);
+                break;
             case STARTED:
                 onAdStarted(event);
                 break;
@@ -450,8 +446,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
     @Override
     public void onAdsManagerLoaded(AdsManagerLoadedEvent event) {
         streamManager = event.getStreamManager();
-        AdsManager adManager = event.getAdsManager();
-        //videoPlayer.setStreamManager(streamManager); // @TODO not yet
 
         // Create the ads rendering settings
         AdsRenderingSettings adsRenderingSettings = sdkFactory.createAdsRenderingSettings();
@@ -461,10 +455,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
         streamManager.addAdErrorListener(this);
         streamManager.addAdEventListener(this);
         streamManager.init(adsRenderingSettings);
-    }
-
-    public interface AdFailedListener {
-        void onVideoPlaybackFailed();
     }
 }
 

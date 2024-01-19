@@ -1,11 +1,13 @@
 package com.truex.googlereferenceapp.player;
 
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.media3.ui.PlayerView;
 
 import com.truex.googlereferenceapp.R;
 import com.truex.googlereferenceapp.home.StreamConfiguration;
@@ -14,7 +16,7 @@ public class PlayerViewFragment extends Fragment {
 
     protected VideoPlayer videoPlayer;
 
-    protected VideoAdPlayer videoAndAdPlayer;
+    protected VideoAdPlayer videoAdPlayer;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -29,15 +31,11 @@ public class PlayerViewFragment extends Fragment {
         // Retrieve the stream configuration from the arguments bundle
         StreamConfiguration streamConfiguration = getArguments().getParcelable(StreamConfiguration.class.getSimpleName());
 
-        // Retrieve the Ad UI Container ViewGroup
         ViewGroup adUiContainer = getView().findViewById(R.id.ad_ui_container);
+        PlayerView playerView = getView().findViewById(R.id.player_view);
 
-        // Set-up the video playback manager
-        videoPlayer = new VideoPlayer(getContext(), getView().findViewById(R.id.player_view));
-        videoAndAdPlayer = new VideoAdPlayer(getContext(), videoPlayer, streamConfiguration, adUiContainer);
-
-        // Begin playback of the stream
-        videoAndAdPlayer.requestAndPlayStream();
+        videoAdPlayer = new VideoAdPlayer(getContext(), streamConfiguration, playerView, adUiContainer);
+        videoAdPlayer.requestAndPlayStream();
     }
 
     @Override
@@ -45,8 +43,8 @@ public class PlayerViewFragment extends Fragment {
         super.onPause();
 
         // Pause the playback
-        if (videoAndAdPlayer != null) {
-            videoAndAdPlayer.pause();
+        if (videoAdPlayer != null) {
+            videoAdPlayer.pause();
         }
     }
 
@@ -55,8 +53,8 @@ public class PlayerViewFragment extends Fragment {
         super.onResume();
 
         // Resume the playback
-        if (videoAndAdPlayer != null) {
-            videoAndAdPlayer.resume();
+        if (videoAdPlayer != null) {
+            videoAdPlayer.resume();
         }
     }
 
@@ -67,12 +65,12 @@ public class PlayerViewFragment extends Fragment {
     }
 
     private void cleanUp() {
-        videoAndAdPlayer.release();
+        videoAdPlayer.release();
         reset();
     }
 
     private void reset() {
-        videoAndAdPlayer = null;
+        videoAdPlayer = null;
         videoPlayer = null;
     }
 }
