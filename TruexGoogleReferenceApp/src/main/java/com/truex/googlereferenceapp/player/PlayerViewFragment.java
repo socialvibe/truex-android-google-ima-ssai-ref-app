@@ -10,6 +10,7 @@ import androidx.annotation.OptIn;
 import androidx.fragment.app.Fragment;
 import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.Timeline;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.common.util.Util;
 import androidx.media3.datasource.DataSource;
@@ -39,7 +40,7 @@ import java.util.Locale;
 
 @OptIn(markerClass = UnstableApi.class)
 public class PlayerViewFragment extends Fragment implements PlaybackHandler {
-    private static final String CLASSTAG = VideoPlayer.class.getSimpleName();
+    private static final String CLASSTAG = PlayerViewFragment.class.getSimpleName();
 
     // The stream configuration for the selected content
     // The Video ID and Content ID are used to initialize the stream with the IMA SDK
@@ -47,6 +48,7 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
     private StreamConfiguration streamConfiguration;
 
     private ExoPlayer player;
+    private ForwardingPlayer playerWrapper;
     private PlayerView playerView;
     private ImaServerSideAdInsertionMediaSource.AdsLoader adsLoader;
 
@@ -85,7 +87,7 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
     public void onResume() {
         super.onResume();
         playerView.onResume();
-        if (player != null) player.setPlayWhenReady(true);
+        if (player != null) player.play();
     }
 
     @Override
@@ -98,7 +100,7 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
         StringBuilder formatBuilder = new StringBuilder();
         Formatter formatter = new Formatter(formatBuilder, Locale.getDefault());
         String timeDisplay = Util.getStringForTime(formatBuilder, formatter, position);
-        Log.i(CLASSTAG, context + ": " + timeDisplay);
+        Log.i(CLASSTAG, "*** " + context + ": " + timeDisplay);
     }
 
     private void initializePlayer() {
@@ -131,7 +133,12 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
         // Create a SimpleExoPlayer and set it as the player for content and ads.
         player = new ExoPlayer.Builder(context).setMediaSourceFactory(mediaSourceFactory).build();
 
-        ForwardingPlayer playerWrapper = new ForwardingPlayer(player) {
+        playerWrapper = new ForwardingPlayer(player) {
+            @Override
+            public Timeline getCurrentTimeline() {
+                return super.getCurrentTimeline();
+            }
+
             @Override
             public long getContentBufferedPosition() {
                 long result = super.getContentBufferedPosition();
@@ -159,6 +166,13 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
                 logPosition("getDuration", result);
                 return result;
             }
+
+            @Override
+            public long getCurrentPosition() {
+                long result = super.getCurrentPosition();
+                logPosition("getCurrentPosition", result);
+                return result;
+            }
         };
 
         playerView.setPlayer(playerWrapper);
@@ -180,7 +194,7 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
         player.prepare();
 
         // Start playing content.
-        player.setPlayWhenReady(true);
+        player.play();
     }
 
     private void release() {
@@ -252,12 +266,14 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
         seekPosition.addSeconds(ad.getDuration());
         seekPosition.subtractMilliseconds(100); // back a bit to skip a black screen with frozen UI
         seekPositionOnResume = seekPosition.getMilliseconds();
+        logPosition("onAdStarted: position after truex ad: ", seekPositionOnResume);
 
         // We also want to might skip past the ad break if the user gets the credit.
         seekPosition = SeekPosition.fromSeconds(adPodInfo.getTimeOffset());
         seekPosition.addSeconds(adPodInfo.getMaxDuration());
         seekPosition.addSeconds(2); // skip a bit to avoid any frozen UI
         seekPositionAfterAdBreak = seekPosition.getMilliseconds();
+        logPosition("onAdStarted: position after ad break: ", seekPositionAfterAdBreak);
 
         // [4]
         // Start the true[X] engagement
@@ -275,7 +291,8 @@ public class PlayerViewFragment extends Fragment implements PlaybackHandler {
     public void resumeStream() {
         if (player == null) return;
         playerView.setVisibility(View.VISIBLE);
+        logPosition("resumeStream: seekTo: ", seekPositionOnResume);
         player.seekTo(seekPositionOnResume);
-        player.setPlayWhenReady(true);
+        player.play();
     }
 }
