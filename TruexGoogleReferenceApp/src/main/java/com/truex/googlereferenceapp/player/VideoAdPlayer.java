@@ -100,34 +100,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
                         }
                         videoPlayer.seekTo(windowIndex, allowedPositionMs);
                     }
-
-                    @Override
-                    public void onContentComplete() {
-                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
-                            callback.onContentComplete();
-                        }
-                    }
-
-                    @Override
-                    public void onPause() {
-                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
-                            callback.onPause();
-                        }
-                    }
-
-                    @Override
-                    public void onResume() {
-                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
-                            callback.onResume();
-                        }
-                    }
-
-                    @Override
-                    public void onVolumeChanged(int percentage) {
-                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
-                            callback.onVolumeChanged(percentage);
-                        }
-                    }
                 });
         adsLoader = sdkFactory.createAdsLoader(context, settings, displayContainer);
     }
@@ -348,7 +320,6 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
             }
 
             public void seek(long milliseconds) {
-                Log.i(CLASSTAG, "Seek Called");
                 videoPlayer.seekTo(milliseconds);
             }
         };
