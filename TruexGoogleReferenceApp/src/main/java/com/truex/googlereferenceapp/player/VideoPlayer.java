@@ -84,13 +84,13 @@ public class VideoPlayer {
     }
 
     private long streamToContentMs(long position) {
-        if (position == C.TIME_UNSET || position == 0) return position;
-        return streamManager == null ? position : streamManager.getContentTimeMsForStreamTimeMs(position);
+        if (position == C.TIME_UNSET || position == 0 || streamManager == null) return position;
+        return streamManager.getContentTimeMsForStreamTimeMs(position);
     }
 
     private long contentToStreamMs(long position) {
-        if (position == C.TIME_UNSET || position == 0) return position;
-        return streamManager == null ? position : streamManager.getStreamTimeMsForContentTimeMs(position);
+        if (position == C.TIME_UNSET || position == 0 || streamManager == null) return position;
+        return streamManager.getStreamTimeMsForContentTimeMs(position);
     }
 
     static public String positionDisplay(long position) {
