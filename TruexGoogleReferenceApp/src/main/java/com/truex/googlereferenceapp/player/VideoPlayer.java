@@ -110,7 +110,7 @@ public class VideoPlayer {
         msg.append(context);
         msg.append(": ");
         msg.append(positionDisplay(position));
-        if (rawPosition != C.TIME_UNSET) {
+        if (rawPosition != C.TIME_UNSET && position != rawPosition) {
             msg.append(" (raw: ");
             msg.append(positionDisplay(rawPosition));
             msg.append(")");
@@ -143,11 +143,12 @@ public class VideoPlayer {
             public void seekTo(int windowIndex, long contentPosition) {
                 if (!canSeek) return;
                 long seekPos = contentToStreamMs(contentPosition);
-                logPosition("seekTo", contentPosition, seekPos);
                 if (playerCallback != null) {
+                    logPosition("onSeek", contentPosition, seekPos);
                     playerCallback.onSeek(windowIndex, seekPos);
                 } else {
-                    super.seekTo(windowIndex, seekPos);
+                    logPosition("seekTo", contentPosition, seekPos);
+                    player.seekTo(windowIndex, seekPos);
                 }
             }
 
@@ -179,7 +180,7 @@ public class VideoPlayer {
             public long getContentBufferedPosition() {
                 long streamPos = player.getContentBufferedPosition();
                 long result = streamToContentMs(streamPos);
-                logPosition("getContentBufferedPosition", result, streamPos);
+                //logPosition("getContentBufferedPosition", result, streamPos);
                 return result;
             }
 
@@ -203,7 +204,7 @@ public class VideoPlayer {
             public long getBufferedPosition() {
                 long streamPos = player.getBufferedPosition();
                 long result = streamToContentMs(streamPos);
-                logPosition("getBufferedPosition", result, streamPos);
+                //logPosition("getBufferedPosition", result, streamPos);
                 return result;
             }
 
@@ -211,16 +212,19 @@ public class VideoPlayer {
             public long getTotalBufferedDuration() {
                 long streamPos = player.getTotalBufferedDuration();
                 long result = streamToContentMs(streamPos);
-                logPosition("getTotalBufferedDuration", result, streamPos);
+                //logPosition("getTotalBufferedDuration", result, streamPos);
                 return result;
             }
 
+            // In theory we should convert stream positions to content positions,
+            // but in practice the player view only queries the player wrapper for the updated
+            // position.
 //            @Override
 //            public void addListener(Listener listener) {
-//                ForwardingListener forwardingListener = new ForwardingListener(this, listener) {
+//                ForwardingListener listenerWrapper = new ForwardingListener(this, listener) {
+//                  ...override and convert position discontinuity events
 //                };
-//                player.addListener();
-//                super.addListener(listener);
+//                player.addListener(listenerWrapper);
 //            }
         };
         playerView.setPlayer(playerWrapper);
