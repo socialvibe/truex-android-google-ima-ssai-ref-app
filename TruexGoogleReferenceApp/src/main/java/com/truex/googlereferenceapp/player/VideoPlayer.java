@@ -337,6 +337,8 @@ public class VideoPlayer {
         if (withStreamManager == null) {
             this.timelineWithAds = null;
         } else {
+            // Use a timeline that displays content times as opposed to the raw stream times.
+            // I.e. discount the ad time periods.
             Timeline streamTimeline = player.getCurrentTimeline();
             this.timelineWithAds = new ForwardingTimeline(streamTimeline) {
                 @Override
