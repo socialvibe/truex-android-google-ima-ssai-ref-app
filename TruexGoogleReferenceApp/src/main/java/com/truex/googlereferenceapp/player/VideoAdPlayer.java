@@ -1,9 +1,10 @@
 package com.truex.googlereferenceapp.player;
 
 import android.content.Context;
-import android.util.Base64;
 import android.util.Log;
 import android.view.ViewGroup;
+
+import androidx.media3.ui.PlayerView;
 
 import com.google.ads.interactivemedia.v3.api.Ad;
 import com.google.ads.interactivemedia.v3.api.AdErrorEvent;
@@ -13,27 +14,23 @@ import com.google.ads.interactivemedia.v3.api.AdProgressInfo;
 import com.google.ads.interactivemedia.v3.api.AdsLoader;
 import com.google.ads.interactivemedia.v3.api.AdsManagerLoadedEvent;
 import com.google.ads.interactivemedia.v3.api.AdsRenderingSettings;
-import com.google.ads.interactivemedia.v3.api.CompanionAd;
 import com.google.ads.interactivemedia.v3.api.CuePoint;
 import com.google.ads.interactivemedia.v3.api.ImaSdkFactory;
+import com.google.ads.interactivemedia.v3.api.ImaSdkSettings;
 import com.google.ads.interactivemedia.v3.api.StreamDisplayContainer;
 import com.google.ads.interactivemedia.v3.api.StreamManager;
 import com.google.ads.interactivemedia.v3.api.StreamRequest;
 import com.google.ads.interactivemedia.v3.api.player.VideoProgressUpdate;
 import com.google.ads.interactivemedia.v3.api.player.VideoStreamPlayer;
-import com.truex.adrenderer.TruexAdRendererConstants;
 import com.truex.googlereferenceapp.home.StreamConfiguration;
 import com.truex.googlereferenceapp.player.ads.TruexAdManager;
 
-import org.json.JSONObject;
-
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
-    private static final String CLASSTAG = VideoPlaybackManager.class.getSimpleName();
+public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
+    private static final String CLASSTAG = VideoAdPlayer.class.getSimpleName();
 
     // The stream configuration for the selected content
     // The Video ID and Content ID are used to initialize the stream with the IMA SDK
@@ -49,9 +46,10 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     private StreamDisplayContainer displayContainer;
     private StreamManager streamManager;
     private List<VideoStreamPlayer.VideoStreamPlayerCallback> playerCallbacks;
-    private Listener listener;
 
-    private boolean didSeekPastAdBreak = true;
+    private long resumePositionAfterSnapbackMs; // Stream time to snap back to, in milliseconds.
+
+    private boolean didSeekPastAdBreak;
 
     // The renderer that drives the true[X] Engagement experience
     private TruexAdManager truexAdManager;
@@ -59,20 +57,51 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     /**
      * Creates a new VideoPlaybackManager that implements IMA direct-ad-insertion.
      * @param context the app's context.
-     * @param videoPlayer the underlying video player.
+     * @param playerView the playerview videos will be displayed in
      * @param adUiContainer ViewGroup in which to display the ad's UI.
      */
-    VideoPlaybackManager(Context context, VideoPlayer videoPlayer,
-                                StreamConfiguration streamConfiguration,
-                                ViewGroup adUiContainer) {
-        this.videoPlayer = videoPlayer;
+    VideoAdPlayer(Context context,
+                  StreamConfiguration streamConfiguration,
+                  PlayerView playerView,
+                  ViewGroup adUiContainer) {
+        this.videoPlayer = new VideoPlayer(context, playerView);
         this.streamConfiguration = streamConfiguration;
         this.context = context;
         this.adUiContainer = adUiContainer;
         this.playerCallbacks = new ArrayList<>();
         this.sdkFactory = ImaSdkFactory.getInstance();
-        this.displayContainer = sdkFactory.createStreamDisplayContainer();
-        this.adsLoader = sdkFactory.createAdsLoader(context, sdkFactory.createImaSdkSettings(), displayContainer);
+        ImaSdkSettings settings = sdkFactory.createImaSdkSettings();
+        VideoStreamPlayer videoStreamPlayer = createVideoStreamPlayer();
+        this.displayContainer = ImaSdkFactory.createStreamDisplayContainer(adUiContainer, videoStreamPlayer);
+        videoPlayer.setCallback(
+                new VideoPlayerCallback() {
+                    @Override
+                    public void onUserTextReceived(String userText) {
+                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback : playerCallbacks) {
+                            callback.onUserTextReceived(userText);
+                        }
+                    }
+
+                    @Override
+                    public void onSeek(int windowIndex, long streamPositionMs) {
+                        long allowedPositionMs = streamPositionMs;
+                        if (streamManager != null) {
+                            CuePoint cuePoint = streamManager.getPreviousCuePointForStreamTimeMs(streamPositionMs);
+                            if (cuePoint != null && !cuePoint.isPlayed()) {
+                                resumePositionAfterSnapbackMs = streamPositionMs; // Update snap back time.
+                                // Missed cue point, so snap back to the beginning of cue point.
+                                allowedPositionMs = cuePoint.getStartTimeMs();
+                                Log.i(CLASSTAG, "Ad snapback to " + VideoPlayer.positionDisplay(allowedPositionMs)
+                                        + " for " + VideoPlayer.positionDisplay(streamPositionMs));
+                                videoPlayer.seekTo(windowIndex, allowedPositionMs);
+                                videoPlayer.setCanSeek(false);
+                                return;
+                            }
+                        }
+                        videoPlayer.seekTo(windowIndex, allowedPositionMs);
+                    }
+                });
+        adsLoader = sdkFactory.createAdsLoader(context, settings, displayContainer);
     }
 
     /**
@@ -111,10 +140,9 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
             videoPlayer = null;
         }
 
-        // Clean-up the display container
-        if (displayContainer != null) {
-            displayContainer.destroy();
-            displayContainer = null;
+        if (adsLoader != null) {
+            adsLoader.release();
+            adsLoader = null;
         }
     }
 
@@ -152,63 +180,16 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     }
 
     /**
-     * Set the listener
-     * @param listener the listener
-     */
-    void setListener(Listener listener) {
-        this.listener = listener;
-    }
-
-    /**
      * Creates a Stream Request from the requested stream configuration
      * This method also sets up the Display Container for video playback
      * @return the new Stream Request that will be used to begin playback
      */
     private StreamRequest buildStreamRequest() {
-        // Set-up the video stream player
-        VideoStreamPlayer videoStreamPlayer = createVideoStreamPlayer();
-        videoPlayer.setCallback(
-                new VideoPlayerCallback() {
-                    @Override
-                    public void onUserTextReceived(String userText) {
-                        for (VideoStreamPlayer.VideoStreamPlayerCallback callback :
-                                playerCallbacks) {
-                            callback.onUserTextReceived(userText);
-                        }
-                    }
-                    @Override
-                    public void onSeek(int windowIndex, long milliseconds) {
-                        SeekPosition seekPosition = SeekPosition.fromMilliseconds(milliseconds);
-                        seekTo(windowIndex, seekPosition);
-                    }
-                });
-
-        // Set-up the display container
-        displayContainer.setVideoStreamPlayer(videoStreamPlayer);
-        displayContainer.setAdContainer(adUiContainer);
-
         // Create the stream request
         return sdkFactory.createVodStreamRequest(
                 streamConfiguration.getContentID(),
                 streamConfiguration.getVideoID(),
                 null);
-    }
-
-    /**
-     * Seeks to the provided seek position while respecting any ad pods within the stream
-     * @param windowIndex the window index, within the stream, that we will be seeking to
-     * @param seekPosition the position, within the stream, that we will be seeking to
-     */
-    private void seekTo(int windowIndex, SeekPosition seekPosition) {
-        // See if we would seek past an ad, and if so, jump back to it.
-        SeekPosition newSeekPosition = seekPosition;
-        if (streamManager != null) {
-            CuePoint prevCuePoint  = streamManager.getPreviousCuePointForStreamTime(seekPosition.getSeconds());
-            if (prevCuePoint != null && !prevCuePoint.isPlayed()) {
-                newSeekPosition = SeekPosition.fromSeconds(prevCuePoint.getStartTime());
-            }
-        }
-        videoPlayer.seekTo(windowIndex, newSeekPosition);
     }
 
     /**
@@ -227,7 +208,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         seekPosition.subtractMilliseconds(100);
 
         // Seek past the ad
-        videoPlayer.seekTo(seekPosition);
+        videoPlayer.seekTo(seekPosition.getMilliseconds());
     }
 
     /**
@@ -239,25 +220,16 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     private void onAdStarted(AdEvent event) {
         Ad ad = event.getAd();
 
-        // [1]
-        // Retrieve the true[X] companion ad - if it exists
-        CompanionAd truexCompanionAd = getTruexCompanionAd(ad);
-        if (truexCompanionAd == null) {
-            return;
-        }
+        if (!"trueX".equals(ad.getAdSystem())) return; // not a trueX ad
 
         // Retrieve the ad pod info
         AdPodInfo adPodInfo = ad.getAdPodInfo();
-        if (adPodInfo == null) {
-            return;
-        }
+        if (adPodInfo == null) return;
 
         // [2]
-        // The companion ad contains a URL (the "static resource URL") which contains base64 encoded ad parameters
-        JSONObject adParameters = getJSONObjectFromBase64DataURL(truexCompanionAd.getResourceValue());
-        if (adParameters == null) {
-            return;
-        }
+        // The ad description contains the trueX vast config url
+        String vastConfigUrl = ad.getDescription();
+        if (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com")) return; // invalid vast config url
 
         // [3]
         // Pause the underlying stream, in order to present the true[X] experience, and seek over the current ad,
@@ -268,44 +240,8 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
 
         // [4]
         // Start the true[X] engagement
-        String slotType = adPodInfo.getPodIndex() == 0 ? TruexAdRendererConstants.PREROLL : TruexAdRendererConstants.MIDROLL;
         truexAdManager = new TruexAdManager(context, this);
-        truexAdManager.startAd(adUiContainer, adParameters, slotType);
-    }
-
-    /**
-     * Get the JSON object from a base64 data JSON URL
-     * @param dataUrl the base64 data JSON URL
-     * @return the decoded JSON object
-     */
-    private JSONObject getJSONObjectFromBase64DataURL(String dataUrl) {
-        try {
-            String base64String = dataUrl.replace("data:application/json;base64,", "");
-            byte[] base64Decoded = Base64.decode(base64String, Base64.DEFAULT);
-            String json = new String(base64Decoded, StandardCharsets.UTF_8);
-            return new JSONObject(json);
-        } catch (Exception e) {
-            Log.d(CLASSTAG, "Failed to parse base64 data URL: " + dataUrl);
-        }
-        return null;
-    }
-
-    /**
-     * Retrieves the true[X] companion ad - if the provided ad contains one
-     * @param ad the ad object
-     * @return a true[X] companion ad or null if none exist
-     */
-    private CompanionAd getTruexCompanionAd(Ad ad) {
-        if (ad == null || ad.getCompanionAds() == null || ad.getCompanionAds().isEmpty()) {
-            return null;
-        }
-
-        for (CompanionAd companionAd : ad.getCompanionAds()) {
-            if ("truex".equals(companionAd.getApiFramework())) {
-                return companionAd;
-            }
-        }
-        return null;
+        truexAdManager.startAd(adUiContainer, vastConfigUrl);
     }
 
     /**
@@ -319,7 +255,15 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         return new VideoStreamPlayer() {
             @Override
             public void loadUrl(String url, List<HashMap<String, String>> subtitles) {
-                videoPlayer.setStreamURL(url);
+                videoPlayer.setStreamUrl(url);
+                videoPlayer.play();
+            }
+
+            public void pause() {
+                videoPlayer.pause();
+            }
+
+            public void resume() {
                 videoPlayer.play();
             }
 
@@ -350,13 +294,20 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
             public void onAdBreakEnded() {
                 Log.i(CLASSTAG, "Ad Break Ended");
 
+                if (resumePositionAfterSnapbackMs > 0) {
+                    videoPlayer.seekTo(resumePositionAfterSnapbackMs);
+                }
+                resumePositionAfterSnapbackMs = 0;
+
+                videoPlayer.refreshAdMarkers();
+
                 // Re-enable player controls
                 videoPlayer.enableControls(true);
             }
 
             @Override
             public VideoProgressUpdate getContentProgress() {
-                return new VideoProgressUpdate(videoPlayer.getCurrentPositionPeriod(),
+                return new VideoProgressUpdate(videoPlayer.getCurrentPositionMs(),
                         videoPlayer.getDuration());
             }
 
@@ -369,11 +320,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
             }
 
             public void seek(long milliseconds) {
-                Log.i(CLASSTAG, "Seek Called");
-
-                // Seek to the given seek position
-                SeekPosition seekPosition = SeekPosition.fromMilliseconds(milliseconds);
-                videoPlayer.seekTo(seekPosition);
+                videoPlayer.seekTo(milliseconds);
             }
         };
     }
@@ -388,19 +335,16 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         truexAdManager = null;
 
         // Display and resume the stream
-        videoPlayer.display();
+        videoPlayer.show();
         videoPlayer.play();
 
-        // If we did not seek past the ad break -- stop here
-        if (!didSeekPastAdBreak) {
-            return;
-        }
-        didSeekPastAdBreak = false;
-
-
-        // Manually call onAdBreakEnded()
-        if (displayContainer != null && displayContainer.getVideoStreamPlayer() != null) {
-            displayContainer.getVideoStreamPlayer().onAdBreakEnded();
+        if (didSeekPastAdBreak) {
+            // Manually call onAdBreakEnded() now
+            didSeekPastAdBreak = false;
+            VideoStreamPlayer streamPlayer = displayContainer != null ? displayContainer.getVideoStreamPlayer() : null;
+            if (streamPlayer != null) {
+                streamPlayer.onAdBreakEnded();
+            }
         }
     }
 
@@ -434,7 +378,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         seekPosition.addSeconds(2);
 
         // Seek past the ad break
-        videoPlayer.seekTo(seekPosition);
+        videoPlayer.seekTo(seekPosition.getMilliseconds());
 
         // We will need to manually call onAdBreakEnded() when we resume the stream
         didSeekPastAdBreak = true;
@@ -445,7 +389,7 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
     @Override
     public void onAdError(AdErrorEvent event) {
         Log.i(CLASSTAG, String.format("Ad Error: %s", event.getError().getMessage()));
-        listener.onVideoPlaybackFailed();
+        this.release();
     }
 
     /** AdEventListener implementation **/
@@ -458,6 +402,9 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
 
         Log.i(CLASSTAG, String.format("Event: %s", event.getType()));
         switch (event.getType()) {
+            case CUEPOINTS_CHANGED:
+                videoPlayer.setAdsTimeline(streamManager);
+                break;
             case STARTED:
                 onAdStarted(event);
                 break;
@@ -478,10 +425,6 @@ public class VideoPlaybackManager implements PlaybackHandler, AdEvent.AdEventLis
         streamManager.addAdErrorListener(this);
         streamManager.addAdEventListener(this);
         streamManager.init(adsRenderingSettings);
-    }
-
-    public interface Listener {
-        void onVideoPlaybackFailed();
     }
 }
 

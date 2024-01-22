@@ -8,9 +8,6 @@ import com.truex.adrenderer.TruexAdEvent;
 import com.truex.adrenderer.TruexAdRenderer;
 import com.truex.googlereferenceapp.player.PlaybackHandler;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.util.Map;
 
 /**
@@ -38,18 +35,11 @@ public class TruexAdManager {
     /**
      * Start displaying the true[X] engagement
      * @param viewGroup - the view group in which you would like to display the true[X] engagement
-     * @param adParameters - the ad parameters (i.e. the user_id, placement_hash, and vast_config_url)
-     * @param slotType - the slot in which the ad (i.e. "PREROLL" or "MIDROLL")
+     * @param vastConfigUrl - url for accessing the trueX ad vast config JSON values.
      */
-    public void startAd(ViewGroup viewGroup, JSONObject adParameters, String slotType) {
-        try {
-            String vastConfigUrl = adParameters.getString("vast_config_url");
-            truexAdRenderer.init(vastConfigUrl);
-            truexAdRenderer.start(viewGroup);
-        } catch (JSONException err) {
-            Log.e(CLASSTAG, "could not access vast_config_url: " + adParameters.toString());
-            throw new RuntimeException(err);
-        }
+    public void startAd(ViewGroup viewGroup, String vastConfigUrl) {
+        truexAdRenderer.init(vastConfigUrl);
+        truexAdRenderer.start(viewGroup);
     }
 
     /**
@@ -110,6 +100,7 @@ public class TruexAdManager {
                 break;
         }
         if (closeAd) {
+            if (didReceiveCredit) playbackHandler.skipCurrentAdBreak();
             playbackHandler.resumeStream();
         }
     };

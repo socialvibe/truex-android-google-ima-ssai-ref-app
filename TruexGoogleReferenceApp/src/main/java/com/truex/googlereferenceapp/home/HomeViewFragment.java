@@ -1,8 +1,8 @@
 package com.truex.googlereferenceapp.home;
 
+import static com.truex.googlereferenceapp.home.StreamConfiguration.requestStreamConfigurations;
+
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,9 +10,12 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.media3.common.Player;
+import androidx.media3.ui.PlayerView;
+
 import com.bumptech.glide.Glide;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.ui.PlayerView;
 import com.truex.googlereferenceapp.R;
 import com.truex.googlereferenceapp.player.PlayerViewFragment;
 import com.truex.googlereferenceapp.player.VideoPlayer;
@@ -27,8 +30,6 @@ import javax.inject.Inject;
 
 import dagger.android.support.DaggerFragment;
 import okhttp3.OkHttpClient;
-
-import static com.truex.googlereferenceapp.home.StreamConfiguration.requestStreamConfigurations;
 
 public class HomeViewFragment extends DaggerFragment {
     private static String CLASSTAG = HomeViewFragment.class.getSimpleName();
@@ -72,7 +73,7 @@ public class HomeViewFragment extends DaggerFragment {
         }, (Exception e) -> {
             StreamConfiguration fallbackStreamConfiguration = getFallbackStreamConfiguration();
             if (fallbackStreamConfiguration != null) {
-                updateCurrentStream(getFallbackStreamConfiguration());
+                updateCurrentStream(fallbackStreamConfiguration);
             }
         });
     }
@@ -109,8 +110,10 @@ public class HomeViewFragment extends DaggerFragment {
                     .into(streamCover);
 
             // Update and play the preview video
-            previewPlayer.setStreamURL(currentStreamConfiguration.getPreviewURL());
-            previewPlayer.play(Player.REPEAT_MODE_ONE, 0);
+            previewPlayer.setStreamUrl(currentStreamConfiguration.getPreviewURL());
+            previewPlayer.enableRepeatOnce();
+            previewPlayer.setVolume(0);
+            previewPlayer.play();
 
             // Set-up the Play Button
             playButton.setOnClickListener((View v) -> onPlayButtonClicked());
@@ -122,13 +125,15 @@ public class HomeViewFragment extends DaggerFragment {
     }
 
     private void onPlayButtonClicked() {
+        previewPlayer.release();
+
         Bundle arguments = new Bundle();
         arguments.putParcelable(StreamConfiguration.class.getSimpleName(), currentStreamConfiguration);
 
         Fragment fragment = new PlayerViewFragment();
         fragment.setArguments(arguments);
 
-        getFragmentManager().beginTransaction()
+        getParentFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();

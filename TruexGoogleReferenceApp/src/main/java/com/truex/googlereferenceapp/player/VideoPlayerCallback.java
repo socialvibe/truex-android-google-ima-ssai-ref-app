@@ -16,10 +16,12 @@
 
 package com.truex.googlereferenceapp.player;
 
+import androidx.annotation.NonNull;
+
 /**
  * Video player callback to be called when TXXX ID3 tag is received or seeking occurs.
  */
 public interface VideoPlayerCallback {
-    void onUserTextReceived(String userText);
+    void onUserTextReceived(@NonNull String var1);
     void onSeek(int windowIndex, long positionMs);
 }
