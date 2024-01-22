@@ -331,10 +331,10 @@ public class VideoPlayer {
         streamRequested = false; // request new stream on play
     }
 
-    public void setAdsTimeline(StreamManager toManager) {
-        if (streamManager == toManager) return;
-        this.streamManager = toManager;
-        if (toManager == null) {
+    public void setAdsTimeline(StreamManager withStreamManager) {
+        if (streamManager == withStreamManager) return;
+        this.streamManager = withStreamManager;
+        if (withStreamManager == null) {
             this.timelineWithAds = null;
         } else {
             Timeline streamTimeline = player.getCurrentTimeline();
