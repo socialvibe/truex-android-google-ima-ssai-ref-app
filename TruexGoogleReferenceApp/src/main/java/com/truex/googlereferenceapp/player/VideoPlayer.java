@@ -314,7 +314,7 @@ public class VideoPlayer {
     }
 
     public void seekTo(int windowIndex, long positionMs) {
-        logPosition("raw seekTo: window: " + windowIndex, positionMs);
+        logPosition("raw seekTo", positionMs);
         player.seekTo(windowIndex, positionMs);
     }
 
