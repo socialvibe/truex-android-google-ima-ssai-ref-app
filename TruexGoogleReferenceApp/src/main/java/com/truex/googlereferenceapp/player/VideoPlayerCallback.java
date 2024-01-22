@@ -19,9 +19,9 @@ package com.truex.googlereferenceapp.player;
 import com.google.ads.interactivemedia.v3.api.player.VideoStreamPlayer;
 
 /**
- * Video player callback to be called when TXXX ID3 tag is received or seeking occurs.
+ * Video player callback to be called when a seek occurs,
+ * in addition to the usual video stream player callbacks.
  */
 public interface VideoPlayerCallback extends VideoStreamPlayer.VideoStreamPlayerCallback {
-    void onUserTextReceived(String userText);
     void onSeek(int windowIndex, long positionMs);
 }
