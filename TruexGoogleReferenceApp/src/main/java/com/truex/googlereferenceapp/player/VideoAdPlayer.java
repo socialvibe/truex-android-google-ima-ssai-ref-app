@@ -12,7 +12,6 @@ import com.google.ads.interactivemedia.v3.api.AdEvent;
 import com.google.ads.interactivemedia.v3.api.AdPodInfo;
 import com.google.ads.interactivemedia.v3.api.AdProgressInfo;
 import com.google.ads.interactivemedia.v3.api.AdsLoader;
-import com.google.ads.interactivemedia.v3.api.AdsManager;
 import com.google.ads.interactivemedia.v3.api.AdsManagerLoadedEvent;
 import com.google.ads.interactivemedia.v3.api.AdsRenderingSettings;
 import com.google.ads.interactivemedia.v3.api.CuePoint;
@@ -48,7 +47,7 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
     private StreamManager streamManager;
     private List<VideoStreamPlayer.VideoStreamPlayerCallback> playerCallbacks;
 
-    private long snapBackTimeMs; // Stream time to snap back to, in milliseconds.
+    private long resumePositionAfterSnapbackMs; // Stream time to snap back to, in milliseconds.
 
     private boolean didSeekPastAdBreak;
 
@@ -84,21 +83,22 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
                     }
 
                     @Override
-                    public void onSeek(int windowIndex, long positionMs) {
-                        long timeToSeek = positionMs;
+                    public void onSeek(int windowIndex, long streamPositionMs) {
+                        long allowedPositionMs = streamPositionMs;
                         if (streamManager != null) {
-                            CuePoint cuePoint = streamManager.getPreviousCuePointForStreamTimeMs(positionMs);
+                            CuePoint cuePoint = streamManager.getPreviousCuePointForStreamTimeMs(streamPositionMs);
                             if (cuePoint != null && !cuePoint.isPlayed()) {
-                                snapBackTimeMs = timeToSeek; // Update snap back time.
+                                resumePositionAfterSnapbackMs = streamPositionMs; // Update snap back time.
                                 // Missed cue point, so snap back to the beginning of cue point.
-                                timeToSeek = cuePoint.getStartTimeMs();
-                                Log.i(CLASSTAG, "SnapBack to " + timeToSeek + " ms.");
-                                videoPlayer.seekTo(windowIndex, Math.round(timeToSeek));
+                                allowedPositionMs = cuePoint.getStartTimeMs();
+                                Log.i(CLASSTAG, "Ad snapback to " + VideoPlayer.positionDisplay(allowedPositionMs)
+                                        + " for " + VideoPlayer.positionDisplay(streamPositionMs));
+                                videoPlayer.seekTo(windowIndex, allowedPositionMs);
                                 videoPlayer.setCanSeek(false);
                                 return;
                             }
                         }
-                        videoPlayer.seekTo(windowIndex, Math.round(timeToSeek));
+                        videoPlayer.seekTo(windowIndex, allowedPositionMs);
                     }
 
                     @Override
@@ -322,16 +322,15 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
             public void onAdBreakEnded() {
                 Log.i(CLASSTAG, "Ad Break Ended");
 
-                // Re-enable player controls
-                videoPlayer.enableControls(true);
-
-                if (snapBackTimeMs > 0) {
-                    Log.i(CLASSTAG, "SampleAdsWrapper seeking " + snapBackTimeMs + " ms.");
-                    videoPlayer.seekTo(Math.round(snapBackTimeMs));
+                if (resumePositionAfterSnapbackMs > 0) {
+                    videoPlayer.seekTo(resumePositionAfterSnapbackMs);
                 }
-                snapBackTimeMs = 0;
+                resumePositionAfterSnapbackMs = 0;
 
                 videoPlayer.refreshAdMarkers();
+
+                // Re-enable player controls
+                videoPlayer.enableControls(true);
             }
 
             @Override

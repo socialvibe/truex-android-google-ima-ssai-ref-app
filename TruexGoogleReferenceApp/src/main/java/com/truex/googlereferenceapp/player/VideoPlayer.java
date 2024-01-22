@@ -50,7 +50,9 @@ import androidx.media3.ui.PlayerView;
 import com.google.ads.interactivemedia.v3.api.CuePoint;
 import com.google.ads.interactivemedia.v3.api.StreamManager;
 
+import java.util.Formatter;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * A video player that plays HLS or DASH streams using ExoPlayer.
@@ -91,89 +93,137 @@ public class VideoPlayer {
         return streamManager == null ? position : streamManager.getStreamTimeMsForContentTimeMs(position);
     }
 
+    static public String positionDisplay(long position) {
+        StringBuilder formatBuilder = new StringBuilder();
+        Formatter formatter = new Formatter(formatBuilder, Locale.getDefault());
+        String timeDisplay = Util.getStringForTime(formatBuilder, formatter, position);
+        return timeDisplay;
+    }
+
+    static public void logPosition(String context, long position) {
+        logPosition(context, position, C.TIME_UNSET);
+    }
+
+    static public void logPosition(String context, long position, long rawPosition) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("*** ");
+        msg.append(context);
+        msg.append(": ");
+        msg.append(positionDisplay(position));
+        if (rawPosition != C.TIME_UNSET) {
+            msg.append(" (raw: ");
+            msg.append(positionDisplay(rawPosition));
+            msg.append(")");
+        }
+        Log.i(CLASSTAG, msg.toString());
+    }
+
     private void initPlayer() {
         release();
 
         player = new ExoPlayer.Builder(context).build();
-        playerView.setPlayer(
-                new ForwardingPlayer(player) {
-                    @Override
-                    public void seekToDefaultPosition() {
-                        seekToDefaultPosition(getCurrentMediaItemIndex());
-                    }
 
-                    @Override
-                    public void seekToDefaultPosition(int windowIndex) {
-                        seekTo(windowIndex, /* positionMs= */ C.TIME_UNSET);
-                    }
+        ForwardingPlayer playerWrapper = new ForwardingPlayer(player) {
+            @Override
+            public void seekToDefaultPosition() {
+                seekToDefaultPosition(getCurrentMediaItemIndex());
+            }
 
-                    @Override
-                    public void seekTo(long positionMs) {
-                        seekTo(getCurrentMediaItemIndex(), positionMs);
-                    }
+            @Override
+            public void seekToDefaultPosition(int windowIndex) {
+                seekTo(windowIndex, /* positionMs= */ C.TIME_UNSET);
+            }
 
-                    @Override
-                    public void seekTo(int windowIndex, long positionMs) {
-                        if (!canSeek) return;
-                        long seekPos = contentToStreamMs(positionMs);
-                        if (playerCallback != null) {
-                            playerCallback.onSeek(windowIndex, seekPos);
-                        } else {
-                            super.seekTo(windowIndex, seekPos);
-                        }
-                    }
+            @Override
+            public void seekTo(long positionMs) {
+                seekTo(getCurrentMediaItemIndex(), positionMs);
+            }
 
-                    @Override
-                    public Timeline getCurrentTimeline() {
-                        if (timelineWithAds != null) return timelineWithAds;
-                        return super.getCurrentTimeline();
-                    }
+            @Override
+            public void seekTo(int windowIndex, long contentPosition) {
+                if (!canSeek) return;
+                long seekPos = contentToStreamMs(contentPosition);
+                logPosition("seekTo", contentPosition, seekPos);
+                if (playerCallback != null) {
+                    playerCallback.onSeek(windowIndex, seekPos);
+                } else {
+                    super.seekTo(windowIndex, seekPos);
+                }
+            }
 
-                    @Override
-                    public long getContentPosition() {
-                        // Display content position instead of raw stream position to player view.
-                        return streamToContentMs(super.getContentPosition());
-                    }
+            @Override
+            public Timeline getCurrentTimeline() {
+                if (timelineWithAds != null) return timelineWithAds;
+                return player.getCurrentTimeline();
+            }
 
-                    @Override
-                    public long getContentDuration() {
-                        // Display content duration instead of raw stream position to player view.
-                        return streamToContentMs(player.getContentDuration());
-                    }
+            @Override
+            public long getContentPosition() {
+                // Display content position instead of raw stream position to player view.
+                long streamPos = player.getContentPosition();
+                long result = streamToContentMs(streamPos);
+                logPosition("getContentPosition", result, streamPos);
+                return result;
+            }
 
-                    @Override
-                    public long getContentBufferedPosition() {
-                        return streamToContentMs(player.getContentBufferedPosition());
-                    }
+            @Override
+            public long getContentDuration() {
+                // Display content duration instead of raw stream position to player view.
+                long streamPos = player.getContentDuration();
+                long result = streamToContentMs(streamPos);
+                logPosition("getContentDuration", result, streamPos);
+                return result;
+            }
 
-                    @Override
-                    public long getCurrentPosition() {
-                        return streamToContentMs(player.getCurrentPosition());
-                    }
+            @Override
+            public long getContentBufferedPosition() {
+                long streamPos = player.getContentBufferedPosition();
+                long result = streamToContentMs(streamPos);
+                logPosition("getContentBufferedPosition", result, streamPos);
+                return result;
+            }
 
-                    @Override
-                    public long getDuration() {
-                        return streamToContentMs(player.getDuration());
-                    }
+            @Override
+            public long getCurrentPosition() {
+                long streamPos = player.getCurrentPosition();
+                long result = streamToContentMs(streamPos);
+                logPosition("getCurrentPosition", result, streamPos);
+                return result;
+            }
 
-                    @Override
-                    public long getBufferedPosition() {
-                        return streamToContentMs(player.getBufferedPosition());
-                    }
+            @Override
+            public long getDuration() {
+                long streamPos = player.getDuration();
+                long result = streamToContentMs(streamPos);
+                logPosition("getDuration", result, streamPos);
+                return result;
+            }
 
-                    @Override
-                    public long getTotalBufferedDuration() {
-                        return streamToContentMs(player.getTotalBufferedDuration());
-                    }
+            @Override
+            public long getBufferedPosition() {
+                long streamPos = player.getBufferedPosition();
+                long result = streamToContentMs(streamPos);
+                logPosition("getBufferedPosition", result, streamPos);
+                return result;
+            }
 
-//                    @Override
-//                    public void addListener(Listener listener) {
-//                        ForwardingListener forwardingListener = new ForwardingListener(this, listener) {
-//                        };
-//                        player.addListener();
-//                        super.addListener(listener);
-//                    }
-                });
+            @Override
+            public long getTotalBufferedDuration() {
+                long streamPos = player.getTotalBufferedDuration();
+                long result = streamToContentMs(streamPos);
+                logPosition("getTotalBufferedDuration", result, streamPos);
+                return result;
+            }
+
+//            @Override
+//            public void addListener(Listener listener) {
+//                ForwardingListener forwardingListener = new ForwardingListener(this, listener) {
+//                };
+//                player.addListener();
+//                super.addListener(listener);
+//            }
+        };
+        playerView.setPlayer(playerWrapper);
     }
 
     public void play() {
@@ -183,7 +233,7 @@ public class VideoPlayer {
 
         if (streamRequested) {
             // Stream requested, just resume.
-            player.setPlayWhenReady(true);
+            player.play();
             return;
         }
 
@@ -238,12 +288,12 @@ public class VideoPlayer {
                     }
                 });
 
-        player.setPlayWhenReady(true);
+        player.play();
         streamRequested = true;
     }
 
     public void pause() {
-        player.setPlayWhenReady(false);
+        player.pause();
     }
 
     public void hide() {
@@ -254,11 +304,13 @@ public class VideoPlayer {
         playerView.setVisibility(View.VISIBLE);
     }
 
-    public void seekTo(long timeMs) {
-        player.seekTo(timeMs);
+    public void seekTo(long positionMs) {
+        logPosition("raw seekTo", positionMs);
+        player.seekTo(positionMs);
     }
 
     public void seekTo(int windowIndex, long positionMs) {
+        logPosition("raw seekTo: window: " + windowIndex, positionMs);
         player.seekTo(windowIndex, positionMs);
     }
 
@@ -276,17 +328,21 @@ public class VideoPlayer {
     }
 
     public void setAdsTimeline(StreamManager toManager) {
+        if (streamManager == toManager) return;
         this.streamManager = toManager;
         if (toManager == null) {
             this.timelineWithAds = null;
-        } else if (streamManager != toManager) {
+        } else {
             Timeline streamTimeline = player.getCurrentTimeline();
             this.timelineWithAds = new ForwardingTimeline(streamTimeline) {
                 @Override
                 public Window getWindow(int windowIndex, Window window, long defaultPositionProjectionUs) {
                     Window result = super.getWindow(windowIndex, window, defaultPositionProjectionUs);
                     if (result.durationUs != C.TIME_UNSET) {
-                        result.durationUs = Util.msToUs(streamToContentMs(player.getDuration()));
+                        long streamDuration = player.getDuration();
+                        long contentDuration = streamToContentMs(streamDuration);
+                        logPosition("getWindow duration", contentDuration, streamDuration);
+                        result.durationUs = Util.msToUs(contentDuration);
                     }
                     return result;
                 }
@@ -295,7 +351,10 @@ public class VideoPlayer {
                 public Period getPeriod(int periodIndex, Period period, boolean setIds) {
                     Period result = super.getPeriod(periodIndex, period, setIds);
                     if (result.durationUs != C.TIME_UNSET) {
-                        result.durationUs = Util.msToUs(streamToContentMs(player.getDuration()));
+                        long streamDuration = player.getDuration();
+                        long contentDuration = streamToContentMs(streamDuration);
+                        logPosition("getPeriod duration", contentDuration, streamDuration);
+                        result.durationUs = Util.msToUs(contentDuration);
                     }
                     return result;
                 }
