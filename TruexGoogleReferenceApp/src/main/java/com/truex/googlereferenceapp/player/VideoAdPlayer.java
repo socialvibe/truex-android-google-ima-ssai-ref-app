@@ -1,6 +1,7 @@
 package com.truex.googlereferenceapp.player;
 
 import android.content.Context;
+import android.util.Base64;
 import android.util.Log;
 import android.view.ViewGroup;
 
@@ -14,6 +15,7 @@ import com.google.ads.interactivemedia.v3.api.AdProgressInfo;
 import com.google.ads.interactivemedia.v3.api.AdsLoader;
 import com.google.ads.interactivemedia.v3.api.AdsManagerLoadedEvent;
 import com.google.ads.interactivemedia.v3.api.AdsRenderingSettings;
+import com.google.ads.interactivemedia.v3.api.CompanionAd;
 import com.google.ads.interactivemedia.v3.api.CuePoint;
 import com.google.ads.interactivemedia.v3.api.ImaSdkFactory;
 import com.google.ads.interactivemedia.v3.api.ImaSdkSettings;
@@ -25,6 +27,9 @@ import com.google.ads.interactivemedia.v3.api.player.VideoStreamPlayer;
 import com.truex.googlereferenceapp.home.StreamConfiguration;
 import com.truex.googlereferenceapp.player.ads.TruexAdManager;
 
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -219,6 +224,7 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
      */
     private void onAdStarted(AdEvent event) {
         Ad ad = event.getAd();
+        if (ad == null) return;
 
         if (!"trueX".equals(ad.getAdSystem())) return; // not a trueX ad
 
@@ -226,9 +232,27 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
         AdPodInfo adPodInfo = ad.getAdPodInfo();
         if (adPodInfo == null) return;
 
-        // [2]
-        // The ad description contains the trueX vast config url
-        String vastConfigUrl = ad.getDescription();
+        List<CompanionAd> companionAds = ad.getCompanionAds();
+        if (companionAds == null || companionAds.isEmpty()) return; // we expect companion ads
+        CompanionAd truexCompanionAd = null;
+        for (CompanionAd companionAd : companionAds) {
+            if ("truex".equals(companionAd.getApiFramework())) {
+                truexCompanionAd = companionAd;
+                break;
+            }
+        }
+        if (truexCompanionAd == null) return; // we expect a truex companion ad
+
+        JSONObject adParameters = getJSONObjectFromBase64DataURL(truexCompanionAd.getResourceValue());
+        if (adParameters == null) return;
+
+        String vastConfigUrl;
+        try {
+            vastConfigUrl = adParameters.getString("vast_config_url");
+        } catch (Exception err) {
+            Log.w(CLASSTAG, "invalid ad parameters:", err);
+            return;
+        }
         if (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com")) return; // invalid vast config url
 
         // [3]
@@ -242,6 +266,18 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
         // Start the true[X] engagement
         truexAdManager = new TruexAdManager(context, this);
         truexAdManager.startAd(adUiContainer, vastConfigUrl);
+    }
+
+    static public JSONObject getJSONObjectFromBase64DataURL(String dataUrl) {
+        try {
+            String base64String = dataUrl.replace("data:application/json;base64,", "");
+            byte[] base64Decoded = Base64.decode(base64String, Base64.DEFAULT);
+            String json = new String(base64Decoded, StandardCharsets.UTF_8);
+            return new JSONObject(json);
+        } catch (Exception e) {
+            Log.d(CLASSTAG, "Failed to parse base64 data URL: " + dataUrl);
+        }
+        return null;
     }
 
     /**
