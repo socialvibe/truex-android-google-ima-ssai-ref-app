@@ -186,9 +186,14 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
      */
     private StreamRequest buildStreamRequest() {
         // Create the stream request
+//        return sdkFactory.createVodStreamRequest(
+//                streamConfiguration.getContentID(),
+//                streamConfiguration.getVideoID(),
+//                null);
+        // Test A&E stream
         return sdkFactory.createVodStreamRequest(
-                streamConfiguration.getContentID(),
-                streamConfiguration.getVideoID(),
+                "2569727",
+                "1278361667932",
                 null);
     }
 
