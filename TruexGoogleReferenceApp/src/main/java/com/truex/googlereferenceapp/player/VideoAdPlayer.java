@@ -231,6 +231,9 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
         String vastConfigUrl = ad.getDescription();
         if (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com")) return; // invalid vast config url
 
+        // Force and test placement for Adelaide testing on mobile.
+        vastConfigUrl = "https://get.truex.com/c85002cd1d57ece00ea4731bce637ab8fe671660/vast/config?user_agent=Android";
+
         // [3]
         // Pause the underlying stream, in order to present the true[X] experience, and seek over the current ad,
         // which is just a placeholder for the true[X] ad.

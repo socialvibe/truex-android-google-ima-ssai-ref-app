@@ -2,6 +2,14 @@ apply plugin: 'com.android.application'
 
 android {
     namespace "com.truex.googlereferenceapp"
+    signingConfigs {
+        SigningConfiguration {
+            keyAlias 'key'
+            keyPassword 'true[KEY]'
+            storeFile file('../signing-configuration.keystore')
+            storePassword 'true[STORE]'
+        }
+    }
     compileSdk 34
     defaultConfig {
         applicationId "com.truex.googlereferenceapp"
@@ -9,6 +17,7 @@ android {
         targetSdkVersion 33
         versionCode 2
         versionName "2.2.0"
+        signingConfig signingConfigs.SigningConfiguration
     }
     buildTypes {
         release {
@@ -20,9 +29,11 @@ android {
     productFlavors {
         tv {
             dimension "platform"
+            signingConfig signingConfigs.SigningConfiguration
         }
         phone {
             dimension "platform"
+            signingConfig signingConfigs.SigningConfiguration
         }
     }
     compileOptions {
