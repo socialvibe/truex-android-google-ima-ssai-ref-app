@@ -47,7 +47,7 @@ android {
 
 repositories {
     maven {
-        url "https://s3.amazonaws.com/android.truex.com/tar/qa/maven"
+        url "https://s3.amazonaws.com/android.truex.com/tar/prod/maven"
     }
 }
 
