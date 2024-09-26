@@ -29,8 +29,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
-    private static final String CLASSTAG = VideoAdPlayer.class.getSimpleName();
+public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListener, AdErrorEvent.AdErrorListener, AdsLoader.AdsLoadedListener {
+    private static final String CLASSTAG = VideoPlayerWithAds.class.getSimpleName();
 
     // The stream configuration for the selected content
     // The Video ID and Content ID are used to initialize the stream with the IMA SDK
@@ -60,10 +60,10 @@ public class VideoAdPlayer implements PlaybackHandler, AdEvent.AdEventListener, 
      * @param playerView the playerview videos will be displayed in
      * @param adUiContainer ViewGroup in which to display the ad's UI.
      */
-    VideoAdPlayer(Context context,
-                  StreamConfiguration streamConfiguration,
-                  PlayerView playerView,
-                  ViewGroup adUiContainer) {
+    VideoPlayerWithAds(Context context,
+                       StreamConfiguration streamConfiguration,
+                       PlayerView playerView,
+                       ViewGroup adUiContainer) {
         this.videoPlayer = new VideoPlayer(context, playerView);
         this.streamConfiguration = streamConfiguration;
         this.context = context;

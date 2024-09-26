@@ -16,7 +16,7 @@ public class PlayerViewFragment extends Fragment {
 
     protected VideoPlayer videoPlayer;
 
-    protected VideoAdPlayer videoAdPlayer;
+    protected VideoPlayerWithAds videoPlayerWithAds;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -34,8 +34,8 @@ public class PlayerViewFragment extends Fragment {
         ViewGroup adUiContainer = getView().findViewById(R.id.ad_ui_container);
         PlayerView playerView = getView().findViewById(R.id.player_view);
 
-        videoAdPlayer = new VideoAdPlayer(getContext(), streamConfiguration, playerView, adUiContainer);
-        videoAdPlayer.requestAndPlayStream();
+        videoPlayerWithAds = new VideoPlayerWithAds(getContext(), streamConfiguration, playerView, adUiContainer);
+        videoPlayerWithAds.requestAndPlayStream();
     }
 
     @Override
@@ -43,8 +43,8 @@ public class PlayerViewFragment extends Fragment {
         super.onPause();
 
         // Pause the playback
-        if (videoAdPlayer != null) {
-            videoAdPlayer.pause();
+        if (videoPlayerWithAds != null) {
+            videoPlayerWithAds.pause();
         }
     }
 
@@ -53,8 +53,8 @@ public class PlayerViewFragment extends Fragment {
         super.onResume();
 
         // Resume the playback
-        if (videoAdPlayer != null) {
-            videoAdPlayer.resume();
+        if (videoPlayerWithAds != null) {
+            videoPlayerWithAds.resume();
         }
     }
 
@@ -65,12 +65,12 @@ public class PlayerViewFragment extends Fragment {
     }
 
     private void cleanUp() {
-        videoAdPlayer.release();
+        videoPlayerWithAds.release();
         reset();
     }
 
     private void reset() {
-        videoAdPlayer = null;
+        videoPlayerWithAds = null;
         videoPlayer = null;
     }
 }
