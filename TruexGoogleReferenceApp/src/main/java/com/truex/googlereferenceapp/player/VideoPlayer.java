@@ -20,11 +20,8 @@ import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
 
 import androidx.annotation.OptIn;
-import androidx.appcompat.view.menu.ShowableListMenu;
-import androidx.appcompat.widget.ForwardingListener;
 import androidx.media3.common.C;
 import androidx.media3.common.ForwardingPlayer;
 import androidx.media3.common.MediaItem;
@@ -42,7 +39,6 @@ import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.exoplayer.source.ForwardingTimeline;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
-import androidx.media3.exoplayer.source.SinglePeriodTimeline;
 import androidx.media3.extractor.metadata.emsg.EventMessage;
 import androidx.media3.extractor.metadata.id3.TextInformationFrame;
 import androidx.media3.ui.PlayerView;
@@ -64,7 +60,7 @@ public class VideoPlayer {
 
     private final Context context;
 
-    private ExoPlayer player;
+    private ExoPlayer exoPlayer;
     private final PlayerView playerView;
     private VideoPlayerCallback playerCallback;
 
@@ -121,9 +117,9 @@ public class VideoPlayer {
     private void initPlayer() {
         release();
 
-        player = new ExoPlayer.Builder(context).build();
+        exoPlayer = new ExoPlayer.Builder(context).build();
 
-        ForwardingPlayer playerWrapper = new ForwardingPlayer(player) {
+        ForwardingPlayer playerWrapper = new ForwardingPlayer(exoPlayer) {
             @Override
             public void seekToDefaultPosition() {
                 seekToDefaultPosition(getCurrentMediaItemIndex());
@@ -148,20 +144,20 @@ public class VideoPlayer {
                     playerCallback.onSeek(windowIndex, seekPos);
                 } else {
                     logPosition("seekTo", contentPosition, seekPos);
-                    player.seekTo(windowIndex, seekPos);
+                    exoPlayer.seekTo(windowIndex, seekPos);
                 }
             }
 
             @Override
             public Timeline getCurrentTimeline() {
                 if (timelineWithAds != null) return timelineWithAds;
-                return player.getCurrentTimeline();
+                return exoPlayer.getCurrentTimeline();
             }
 
             @Override
             public long getContentPosition() {
                 // Display content position instead of raw stream position to player view.
-                long streamPos = player.getContentPosition();
+                long streamPos = exoPlayer.getContentPosition();
                 long result = streamToContentMs(streamPos);
                 logPosition("getContentPosition", result, streamPos);
                 return result;
@@ -170,7 +166,7 @@ public class VideoPlayer {
             @Override
             public long getContentDuration() {
                 // Display content duration instead of raw stream position to player view.
-                long streamPos = player.getContentDuration();
+                long streamPos = exoPlayer.getContentDuration();
                 long result = streamToContentMs(streamPos);
                 logPosition("getContentDuration", result, streamPos);
                 return result;
@@ -178,7 +174,7 @@ public class VideoPlayer {
 
             @Override
             public long getContentBufferedPosition() {
-                long streamPos = player.getContentBufferedPosition();
+                long streamPos = exoPlayer.getContentBufferedPosition();
                 long result = streamToContentMs(streamPos);
                 //logPosition("getContentBufferedPosition", result, streamPos);
                 return result;
@@ -186,7 +182,7 @@ public class VideoPlayer {
 
             @Override
             public long getCurrentPosition() {
-                long streamPos = player.getCurrentPosition();
+                long streamPos = exoPlayer.getCurrentPosition();
                 long result = streamToContentMs(streamPos);
                 logPosition("getCurrentPosition", result, streamPos);
                 return result;
@@ -194,7 +190,7 @@ public class VideoPlayer {
 
             @Override
             public long getDuration() {
-                long streamPos = player.getDuration();
+                long streamPos = exoPlayer.getDuration();
                 long result = streamToContentMs(streamPos);
                 logPosition("getDuration", result, streamPos);
                 return result;
@@ -202,7 +198,7 @@ public class VideoPlayer {
 
             @Override
             public long getBufferedPosition() {
-                long streamPos = player.getBufferedPosition();
+                long streamPos = exoPlayer.getBufferedPosition();
                 long result = streamToContentMs(streamPos);
                 //logPosition("getBufferedPosition", result, streamPos);
                 return result;
@@ -210,7 +206,7 @@ public class VideoPlayer {
 
             @Override
             public long getTotalBufferedDuration() {
-                long streamPos = player.getTotalBufferedDuration();
+                long streamPos = exoPlayer.getTotalBufferedDuration();
                 long result = streamToContentMs(streamPos);
                 //logPosition("getTotalBufferedDuration", result, streamPos);
                 return result;
@@ -231,13 +227,16 @@ public class VideoPlayer {
     }
 
     public void play() {
-        if (player == null) {
+        if (exoPlayer == null) {
             initPlayer();
         }
 
         if (streamRequested) {
-            // Stream requested, just resume.
-            player.play();
+            // Stream already requested, just resume.
+            int state = exoPlayer.getPlaybackState();
+            boolean isLoading = exoPlayer.isLoading();
+            exoPlayer.setPlayWhenReady(true);
+            exoPlayer.play();
             return;
         }
 
@@ -262,11 +261,11 @@ public class VideoPlayer {
                 throw new UnsupportedOperationException("Unknown stream type.");
         }
 
-        player.setMediaSource(mediaSource);
-        player.prepare();
+        exoPlayer.setMediaSource(mediaSource);
+        exoPlayer.prepare();
 
         // Register for ID3 events.
-        player.addListener(
+        exoPlayer.addListener(
                 new Player.Listener() {
                     @Override
                     public void onMetadata(Metadata metadata) {
@@ -292,12 +291,12 @@ public class VideoPlayer {
                     }
                 });
 
-        player.play();
+        exoPlayer.play();
         streamRequested = true;
     }
 
     public void pause() {
-        player.pause();
+        exoPlayer.pause();
     }
 
     public void hide() {
@@ -310,18 +309,18 @@ public class VideoPlayer {
 
     public void seekTo(long positionMs) {
         logPosition("raw seekTo", positionMs);
-        player.seekTo(positionMs);
+        exoPlayer.seekTo(positionMs);
     }
 
     public void seekTo(int windowIndex, long positionMs) {
         logPosition("raw seekTo", positionMs);
-        player.seekTo(windowIndex, positionMs);
+        exoPlayer.seekTo(windowIndex, positionMs);
     }
 
     public void release() {
-        if (player != null) {
-            player.release();
-            player = null;
+        if (exoPlayer != null) {
+            exoPlayer.release();
+            exoPlayer = null;
             streamRequested = false;
         }
     }
@@ -339,13 +338,13 @@ public class VideoPlayer {
         } else {
             // Use a timeline that displays content times as opposed to the raw stream times.
             // I.e. discount the ad time periods.
-            Timeline streamTimeline = player.getCurrentTimeline();
+            Timeline streamTimeline = exoPlayer.getCurrentTimeline();
             this.timelineWithAds = new ForwardingTimeline(streamTimeline) {
                 @Override
                 public Window getWindow(int windowIndex, Window window, long defaultPositionProjectionUs) {
                     Window result = super.getWindow(windowIndex, window, defaultPositionProjectionUs);
                     if (result.durationUs != C.TIME_UNSET) {
-                        long streamDuration = player.getDuration();
+                        long streamDuration = exoPlayer.getDuration();
                         long contentDuration = streamToContentMs(streamDuration);
                         logPosition("getWindow duration", contentDuration, streamDuration);
                         result.durationUs = Util.msToUs(contentDuration);
@@ -357,7 +356,7 @@ public class VideoPlayer {
                 public Period getPeriod(int periodIndex, Period period, boolean setIds) {
                     Period result = super.getPeriod(periodIndex, period, setIds);
                     if (result.durationUs != C.TIME_UNSET) {
-                        long streamDuration = player.getDuration();
+                        long streamDuration = exoPlayer.getDuration();
                         long contentDuration = streamToContentMs(streamDuration);
                         logPosition("getPeriod duration", contentDuration, streamDuration);
                         result.durationUs = Util.msToUs(contentDuration);
@@ -422,34 +421,34 @@ public class VideoPlayer {
      * Returns current position of the playhead in milliseconds for DASH and HLS stream.
      */
     public long getCurrentPositionMs() {
-        if (player == null) return 0;
+        if (exoPlayer == null) return 0;
 
-        Timeline currentTimeline = player.getCurrentTimeline();
+        Timeline currentTimeline = exoPlayer.getCurrentTimeline();
         if (currentTimeline.isEmpty()) {
-            return player.getCurrentPosition();
+            return exoPlayer.getCurrentPosition();
         }
         Timeline.Window window = new Timeline.Window();
-        player.getCurrentTimeline().getWindow(player.getCurrentMediaItemIndex(), window);
+        exoPlayer.getCurrentTimeline().getWindow(exoPlayer.getCurrentMediaItemIndex(), window);
         if (window.isLive()) {
-            return player.getCurrentPosition() + window.windowStartTimeMs;
+            return exoPlayer.getCurrentPosition() + window.windowStartTimeMs;
         } else {
-            return player.getCurrentPosition();
+            return exoPlayer.getCurrentPosition();
         }
     }
 
     public void enableRepeatOnce() {
-        if (player != null) player.setRepeatMode(Player.REPEAT_MODE_ONE);
+        if (exoPlayer != null) exoPlayer.setRepeatMode(Player.REPEAT_MODE_ONE);
     }
 
     public void setVolume(float volume) {
-        if (player != null) player.setVolume(volume);
+        if (exoPlayer != null) exoPlayer.setVolume(volume);
     }
 
     public int getVolume() {
-        return player == null ? 0 : Math.round(player.getVolume() * 100);
+        return exoPlayer == null ? 0 : Math.round(exoPlayer.getVolume() * 100);
     }
 
     public long getDuration() {
-        return player == null ? 0 : player.getDuration();
+        return exoPlayer == null ? 0 : exoPlayer.getDuration();
     }
 }
