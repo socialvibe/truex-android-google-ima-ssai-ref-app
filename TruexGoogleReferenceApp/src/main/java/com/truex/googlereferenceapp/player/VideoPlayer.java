@@ -100,6 +100,16 @@ public class VideoPlayer {
         logPosition(context, position, C.TIME_UNSET);
     }
 
+    public void logPosition(String context) {
+        long streamPos = exoPlayer.getCurrentPosition();
+        long contentPos = streamToContentMs(streamPos);
+        int state = exoPlayer.getPlaybackState();
+        boolean loading = exoPlayer.isLoading();
+        boolean playing = exoPlayer.isPlaying();
+        boolean inAd = exoPlayer.isPlayingAd();
+        logPosition(context + " *** state: " + state + " playing: " + playing + " loading: " + loading + " inAd: " + inAd, contentPos, streamPos);
+    }
+
     static public void logPosition(String context, long position, long rawPosition) {
         StringBuilder msg = new StringBuilder();
         msg.append("*** ");
@@ -231,11 +241,10 @@ public class VideoPlayer {
             initPlayer();
         }
 
+        logPosition("play");
+
         if (streamRequested) {
             // Stream already requested, just resume.
-            int state = exoPlayer.getPlaybackState();
-            boolean isLoading = exoPlayer.isLoading();
-            exoPlayer.setPlayWhenReady(true);
             exoPlayer.play();
             return;
         }
@@ -296,6 +305,7 @@ public class VideoPlayer {
     }
 
     public void pause() {
+        logPosition("pause");
         exoPlayer.pause();
     }
 
