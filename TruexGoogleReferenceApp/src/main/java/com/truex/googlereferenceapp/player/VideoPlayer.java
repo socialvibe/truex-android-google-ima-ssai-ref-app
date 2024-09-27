@@ -107,7 +107,7 @@ public class VideoPlayer {
         boolean loading = exoPlayer.isLoading();
         boolean playing = exoPlayer.isPlaying();
         boolean inAd = exoPlayer.isPlayingAd();
-        logPosition(context + " *** state: " + state + " playing: " + playing + " loading: " + loading + " inAd: " + inAd, contentPos, streamPos);
+        logPosition(context + ": state: " + state + " playing: " + playing + " loading: " + loading + " inAd: " + inAd, contentPos, streamPos);
     }
 
     static public void logPosition(String context, long position, long rawPosition) {
@@ -147,13 +147,15 @@ public class VideoPlayer {
 
             @Override
             public void seekTo(int windowIndex, long contentPosition) {
-                if (!canSeek) return;
                 long seekPos = contentToStreamMs(contentPosition);
-                if (playerCallback != null) {
-                    logPosition("onSeek", contentPosition, seekPos);
+                if (!canSeek) {
+                    logPosition("playerWrapper.seekTo: canSeek=false", contentPosition, seekPos);
+
+                } else if (playerCallback != null) {
+                    logPosition("playerWrapper.seekTo: onSeek", contentPosition, seekPos);
                     playerCallback.onSeek(windowIndex, seekPos);
                 } else {
-                    logPosition("seekTo", contentPosition, seekPos);
+                    logPosition("playerWrapper.seekTo: seekTo", contentPosition, seekPos);
                     exoPlayer.seekTo(windowIndex, seekPos);
                 }
             }
@@ -241,14 +243,15 @@ public class VideoPlayer {
             initPlayer();
         }
 
-        logPosition("play");
 
         if (streamRequested) {
             // Stream already requested, just resume.
+            logPosition("play");
             exoPlayer.play();
             return;
         }
 
+        Log.i(CLASSTAG, "*** play: " + streamUrl);
         DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context);
         int type = Util.inferContentType(Uri.parse(streamUrl));
         MediaItem mediaItem = MediaItem.fromUri(Uri.parse(streamUrl));

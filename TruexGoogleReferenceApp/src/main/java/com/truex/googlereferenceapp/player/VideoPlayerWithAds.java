@@ -220,7 +220,7 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
     private void onAdStarted(AdEvent event) {
         Ad ad = event.getAd();
 
-        if (!"xtrueX".equals(ad.getAdSystem())) return; // not a trueX ad
+        if (!"trueX".equals(ad.getAdSystem())) return; // not a trueX ad
 
         // Retrieve the ad pod info
         AdPodInfo adPodInfo = ad.getAdPodInfo();
