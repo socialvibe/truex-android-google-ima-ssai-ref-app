@@ -105,6 +105,7 @@ public class TruexAdManager {
                 break;
         }
         if (closeAd) {
+            //if (didReceiveCredit) playbackHandler.skipCurrentAdBreak();
             if (didReceiveCredit) playbackHandler.skipCurrentAdBreak();
             playbackHandler.resumeStream();
         }
