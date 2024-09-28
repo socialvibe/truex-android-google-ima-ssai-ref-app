@@ -124,10 +124,34 @@ public class VideoPlayer {
         Log.i(CLASSTAG, msg.toString());
     }
 
+    private void reportAvailableCommands(String context) {
+        StringBuilder builder = new StringBuilder(context + ": exoplayer available commands: ");
+        Player.Commands commands = exoPlayer.getAvailableCommands();
+        addAvailableCommands(builder, commands, Player.COMMAND_PLAY_PAUSE, "playPause");
+        addAvailableCommands(builder, commands, Player.COMMAND_SEEK_FORWARD, "seek");
+        addAvailableCommands(builder, commands, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM, "seekToNextMedia");
+        Log.i(CLASSTAG, builder.toString());
+    }
+
+    private void addAvailableCommands(StringBuilder builder, Player.Commands availableCommands, int command, String commandName) {
+        if (availableCommands.contains(command)) {
+            builder.append(' ');
+            builder.append(commandName);
+        }
+    }
+
     private void initPlayer() {
         release();
 
         exoPlayer = new ExoPlayer.Builder(context).build();
+        reportAvailableCommands("initial");
+
+        exoPlayer.addListener(new Player.Listener() {
+            @Override
+            public void onAvailableCommandsChanged(Player.Commands availableCommands) {
+                reportAvailableCommands("changed");
+            }
+        });
 
         ForwardingPlayer playerWrapper = new ForwardingPlayer(exoPlayer) {
             @Override
