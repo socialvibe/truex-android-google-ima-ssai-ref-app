@@ -130,6 +130,7 @@ public class VideoPlayer {
         addAvailableCommands(builder, commands, Player.COMMAND_PLAY_PAUSE, "playPause");
         addAvailableCommands(builder, commands, Player.COMMAND_SEEK_FORWARD, "seek");
         addAvailableCommands(builder, commands, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM, "seekToNextMedia");
+        addAvailableCommands(builder, commands, Player.COMMAND_GET_TIMELINE, "getTimeline");
         Log.i(CLASSTAG, builder.toString());
     }
 
@@ -375,11 +376,16 @@ public class VideoPlayer {
         } else {
             // Use a timeline that displays content times as opposed to the raw stream times.
             // I.e. discount the ad time periods.
-            Timeline streamTimeline = exoPlayer.getCurrentTimeline();
-            this.timelineWithAds = new ForwardingTimeline(streamTimeline) {
+            // NOTE: we don't use the ForwardingTimeline helper since the current timeline is a dynamic value.
+            this.timelineWithAds = new Timeline() {
+                @Override
+                public int getWindowCount() {
+                    return exoPlayer.getCurrentTimeline().getWindowCount();
+                }
+
                 @Override
                 public Window getWindow(int windowIndex, Window window, long defaultPositionProjectionUs) {
-                    Window result = super.getWindow(windowIndex, window, defaultPositionProjectionUs);
+                    Window result = exoPlayer.getCurrentTimeline().getWindow(windowIndex, window, defaultPositionProjectionUs);
                     if (result.durationUs != C.TIME_UNSET) {
                         long streamDuration = exoPlayer.getDuration();
                         long contentDuration = streamToContentMs(streamDuration);
@@ -390,8 +396,13 @@ public class VideoPlayer {
                 }
 
                 @Override
+                public int getPeriodCount() {
+                    return exoPlayer.getCurrentTimeline().getPeriodCount();
+                }
+
+                @Override
                 public Period getPeriod(int periodIndex, Period period, boolean setIds) {
-                    Period result = super.getPeriod(periodIndex, period, setIds);
+                    Period result = exoPlayer.getCurrentTimeline().getPeriod(periodIndex, period, setIds);
                     if (result.durationUs != C.TIME_UNSET) {
                         long streamDuration = exoPlayer.getDuration();
                         long contentDuration = streamToContentMs(streamDuration);
@@ -399,6 +410,16 @@ public class VideoPlayer {
                         result.durationUs = Util.msToUs(contentDuration);
                     }
                     return result;
+                }
+
+                @Override
+                public int getIndexOfPeriod(Object uid) {
+                    return exoPlayer.getCurrentTimeline().getIndexOfPeriod(uid);
+                }
+
+                @Override
+                public Object getUidOfPeriod(int periodIndex) {
+                    return exoPlayer.getCurrentTimeline().getUidOfPeriod(periodIndex);
                 }
             };
         }
