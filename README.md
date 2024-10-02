@@ -7,7 +7,7 @@ ad renderer with the Google Ad Manager IMA SDK on Fire TV and Android TV. This d
 will step through the various pieces of code that make the integration work, so that
 the same basic ideas can be replicated in a real production app.
 
-This reference app covers the essential work. For a more detailed integration guide, please refer to: https://github.com/socialvibe/truex-androidtv-integrations.
+This reference app covers the essential work. For a more detailed integration guide, please refer to: https://github.com/socialvibe/truex-android-google-ima-ssai-ref-app.
 
 ## Assumptions
 
@@ -17,6 +17,11 @@ working from a project that has been created following the instructions at the
 We also assume you have already acquired the TrueX renderer code through
 [Maven](https://github.com/socialvibe/truex-tv-integrations) or direct download,
 and have added to your project appropriately.
+
+Refer to the [build.gradle](./TruexGoogleReferenceApp/build.gradle) file to see the TrueX renderer dependency:
+```
+    implementation 'com.truex:TruexAdRenderer-Android:2.8.2'
+```
 
 ## References
 
