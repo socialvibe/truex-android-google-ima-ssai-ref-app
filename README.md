@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project contains sample source code that demonstrates how to integrate the true[X]
+This project contains sample source code that demonstrates how to integrate the TrueX
 ad renderer with the Google Ad Manager IMA SDK on Fire TV and Android TV. This document
 will step through the various pieces of code that make the integration work, so that
 the same basic ideas can be replicated in a real production app.
@@ -14,7 +14,7 @@ This reference app covers the essential work. For a more detailed integration gu
 We assume you have either already integrated the IMA SDK with your app, or you are
 working from a project that has been created following the instructions at the
 [IMA SDK For Android page](https://developers.google.com/interactive-media-ads/docs/sdks/android).
-We also assume you have already acquired the true[X] renderer code through
+We also assume you have already acquired the TrueX renderer code through
 [Maven](https://github.com/socialvibe/truex-tv-integrations) or direct download,
 and have added to your project appropriately.
 
@@ -22,40 +22,39 @@ and have added to your project appropriately.
 
 We've marked the source code with comments containing numbers in brackets: ("[3]", for example),
 that correlate with the steps listed below. For example, if you want to see how to parse ad 
-parameters, search the `VideoPlaybackManager.java` file for `[3]` and you will find the related
+parameters, search the `VideoPlayerWithAds.java` file for `[3]` and you will find the related
 code.
 
 ## Steps
 
-### [1] - Look for true[X] companions for a given ad (VideoPlaybackManager.java)
+### [1] - Look for TrueX ads (VideoPlayerWithAds.java)
 
 In the IMA delegate method `onAdEvent`, we call `onAdStarted` when the event is an ad
-started event. In `onAdStarted`, we call the `Ad`'s `getCompanionAds` method and inspect
-each of the companion ads. If any companion has an `apiFramework` value matching `truex`,
-then we ignore all other companion ads and begin the true[X] engagement experience.
+started event. In `onAdStarted`, we call the `ad`'s `getAdSystem` method. If the value matches `trueX`,
+then we pause ad playback begin the TrueX engagement experience.
 
-### [2] - Parse ad parameters (VideoPlaybackManager.java)
+### [2] - Get ad parameters (VideoPlayerWithAds.java)
 
-The `CompanionAd` object contains a data URL which encodes parameters used by the true[X]
-renderer. We parse this base64 string into a `JSONObject`.
+The ad description contains a data URL which encodes parameters used by the TrueX
+renderer. We extract this via the `ad.getDescription()` call.
 
-### [3] - Prepare to enter the engagement (VideoPlaybackManager.java)
+### [3] - Prepare to enter the engagement (VideoPlayerWithAds.java)
 
 By default the underlying ads, which IMA has stitched into the stream, will keep playing.
 First we pause playback. There will be a "placeholder" ad at the first position of the ad
-break (this is the true[X] ad also containing information on how to enter the engagement).
-We need to seek over the placeholder.
+break (this is the TrueX ad also containing information on how to enter the engagement).
+We need to seek over the placeholder ad video.
 
-### [4] - Initialize and start the renderer (VideoPlaybackManager.java)
+### [4] - Start the TrueX engagement (VideoPlayerWithAds.java)
 
-Once we have the ad parameter JSON object, we can initialize the true[X] ad manager and set
-our `VideoPlaybackManager` as its `PlaybackHandler`. We then start the true[X] ad experience
-by calling `startAd` on the true[X] ad manager that we instantiated, with the ad parameters,
-slot type, and the view group in which we will be displaying the true[X] ad experience.
+Once we have the ad parameter JSON object, we can initialize the TrueX ad manager and set
+our `VideoPlaybackManager` as its `PlaybackHandler`. We then start the TrueX ad experience
+by calling `startAd` on the TrueX ad manager that we instantiated, with the ad parameters,
+slot type, and the view group in which we will be displaying the TrueX ad experience.
 
 ### [5] - Respond to AD_FREE_POD (TruexAdManager.java)
 
-If the user fulfills the requirements to earn true[ATTENTION], the true[X] event listener for
+If the user fulfills the requirements to earn true[ATTENTION], the TrueX event listener for
 the `AD_FREE_POD` event will be called. We respond by seeking the underlying stream over the
 current ad break. This accomplishes the "reward" portion of the engagement.
 
@@ -78,12 +77,12 @@ The remaining work is to resume playback.
 
 ### Install Steps
 
-* Clone the `master` branch of the `Sheppard` repository
+* Clone the `master` branch of the `TruexGoogleReferenceApp` repository
     * `git clone https://github.com/socialvibe/truex-android-google-ad-manager-reference-app.git`
 
 * Open Sheppard with Android Studio
     * Open Android Studio
-    * Select `Open an existing Android Studio project` and select the Sheppard folder
+    * Select `Open an existing Android Studio project` and select the project folder
 
 
 ### Run Steps

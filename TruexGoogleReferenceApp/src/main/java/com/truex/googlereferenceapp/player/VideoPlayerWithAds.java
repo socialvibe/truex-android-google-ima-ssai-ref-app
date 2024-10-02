@@ -220,26 +220,26 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
     private void onAdStarted(AdEvent event) {
         Ad ad = event.getAd();
 
+        // [1] - Look for TrueX ads
         if (!"trueX".equals(ad.getAdSystem())) return; // not a trueX ad
 
         // Retrieve the ad pod info
         AdPodInfo adPodInfo = ad.getAdPodInfo();
         if (adPodInfo == null) return;
 
-        // [2]
+        // [2] - Get ad parameters
         // The ad description contains the trueX vast config url
         String vastConfigUrl = ad.getDescription();
         if (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com")) return; // invalid vast config url
 
-        // [3]
+        // [3] - Prepare to enter the engagement
         // Pause the underlying stream, in order to present the true[X] experience, and seek over the current ad,
         // which is just a placeholder for the true[X] ad.
         videoPlayer.pause();
         videoPlayer.hide();
         seekPastInitialAd(ad, adPodInfo);
 
-        // [4]
-        // Start the true[X] engagement
+        // [4] - Start the TrueX engagement
         truexAdManager = new TruexAdManager(context, this);
         truexAdManager.startAd(adUiContainer, vastConfigUrl);
     }
