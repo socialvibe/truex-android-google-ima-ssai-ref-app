@@ -80,18 +80,20 @@ public class TruexAdManager {
             case AD_STARTED:
                 break;
 
-           case USER_CANCEL_STREAM:
+            case AD_FREE_POD:
+                // [5] - Respond to AD_FREE_POD
+                // the user did sufficient interaction for an ad credit
+                didReceiveCredit = true;
+                break;
+
+            case USER_CANCEL_STREAM:
                 // User backed out of the choice card, which means backing out of the entire video.
                 // The user would like to cancel the stream, but we are not supporting that in this app.
             case AD_ERROR:
             case AD_COMPLETED:
             case NO_ADS_AVAILABLE:
+                // [6] - Respond to renderer finish events
                 closeAd = true;
-                break;
-
-            case AD_FREE_POD:
-                // the user did sufficient interaction for an ad credit
-                didReceiveCredit = true;
                 break;
 
             case OPT_IN:
