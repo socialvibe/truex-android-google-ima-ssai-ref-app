@@ -205,7 +205,7 @@ public class VideoPlayer {
                 // Display content duration instead of raw stream position to player view.
                 long streamPos = exoPlayer.getContentDuration();
                 long result = streamToContentMs(streamPos);
-                logPosition("getContentDuration", result, streamPos);
+                //logPosition("getContentDuration", result, streamPos);
                 return result;
             }
 
@@ -221,7 +221,7 @@ public class VideoPlayer {
             public long getCurrentPosition() {
                 long streamPos = exoPlayer.getCurrentPosition();
                 long result = streamToContentMs(streamPos);
-                logPosition("getCurrentPosition", result, streamPos);
+                //logPosition("getCurrentPosition", result, streamPos);
                 return result;
             }
 
@@ -229,7 +229,7 @@ public class VideoPlayer {
             public long getDuration() {
                 long streamPos = exoPlayer.getDuration();
                 long result = streamToContentMs(streamPos);
-                logPosition("getDuration", result, streamPos);
+                //logPosition("getDuration", result, streamPos);
                 return result;
             }
 
