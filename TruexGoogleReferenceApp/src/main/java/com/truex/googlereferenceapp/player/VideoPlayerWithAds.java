@@ -38,10 +38,11 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
     private StreamConfiguration streamConfiguration;
 
     // These properties allow us to do the basic work of playing back ad-stitched video
-    private Context context;
-    private ViewGroup adUiContainer;
+    final private Context context;
+    final private ViewGroup adUiContainer;
     private VideoPlayer videoPlayer;
-    private ImaSdkFactory sdkFactory;
+
+    final private ImaSdkFactory sdkFactory;
     private AdsLoader adsLoader;
     private StreamDisplayContainer displayContainer;
     private StreamManager streamManager;
