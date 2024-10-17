@@ -1,6 +1,5 @@
 package com.truex.googlereferenceapp.player.ads;
 
-import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -8,7 +7,6 @@ import android.view.ViewGroup;
 import com.truex.adrenderer.TruexAdEvent;
 import com.truex.adrenderer.TruexAdOptions;
 import com.truex.adrenderer.TruexAdRenderer;
-import com.truex.adrenderer.util.UIUtil;
 import com.truex.googlereferenceapp.player.PlaybackHandler;
 
 import java.util.Map;
@@ -25,8 +23,6 @@ public class TruexAdManager {
     private TruexAdRenderer truexAdRenderer;
     private boolean didReceiveCredit;
 
-    final private Context context;
-
     public TruexAdManager(Context context, PlaybackHandler playbackHandler) {
         this.playbackHandler = playbackHandler;
 
@@ -35,8 +31,6 @@ public class TruexAdManager {
 
         // Listen for all ad events.
         truexAdRenderer.addEventListener(null, this::adEventHandler);
-
-        this.context = context;
     }
 
     /**
