@@ -100,16 +100,26 @@ public class VideoPlayer {
         logPosition(context, position, C.TIME_UNSET);
     }
 
+    static public String playerStateLabelOf(int state) {
+        return switch (state) {
+            case Player.STATE_IDLE -> "idle";
+            case Player.STATE_BUFFERING -> "buffering";
+            case Player.STATE_READY -> "ready";
+            case Player.STATE_ENDED -> "ended";
+            default -> "unknown-" + state;
+        };
+    }
+
     public void logPosition(String context) {
         long streamPos = exoPlayer.getCurrentPosition();
         long contentPos = streamToContentMs(streamPos);
-        int state = exoPlayer.getPlaybackState();
+        String state = playerStateLabelOf(exoPlayer.getPlaybackState());
         boolean loading = exoPlayer.isLoading();
         boolean playing = exoPlayer.isPlaying();
         boolean inAd = exoPlayer.isPlayingAd();
         logPosition(context + ": state: " + state + " playing: " + playing + " loading: " + loading + " inAd: " + inAd, contentPos, streamPos);
     }
-
+    
     static public void logPosition(String context, long position, long rawPosition) {
         StringBuilder msg = new StringBuilder();
         msg.append("*** ");
@@ -151,6 +161,11 @@ public class VideoPlayer {
             @Override
             public void onAvailableCommandsChanged(Player.Commands availableCommands) {
                 reportAvailableCommands("changed");
+            }
+
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                logPosition("playerStateChanged");
             }
         });
 
@@ -205,7 +220,7 @@ public class VideoPlayer {
                 // Display content duration instead of raw stream position to player view.
                 long streamPos = exoPlayer.getContentDuration();
                 long result = streamToContentMs(streamPos);
-                logPosition("getContentDuration", result, streamPos);
+                //logPosition("getContentDuration", result, streamPos);
                 return result;
             }
 
@@ -221,7 +236,7 @@ public class VideoPlayer {
             public long getCurrentPosition() {
                 long streamPos = exoPlayer.getCurrentPosition();
                 long result = streamToContentMs(streamPos);
-                logPosition("getCurrentPosition", result, streamPos);
+                //logPosition("getCurrentPosition", result, streamPos);
                 return result;
             }
 
@@ -229,7 +244,7 @@ public class VideoPlayer {
             public long getDuration() {
                 long streamPos = exoPlayer.getDuration();
                 long result = streamToContentMs(streamPos);
-                logPosition("getDuration", result, streamPos);
+                //logPosition("getDuration", result, streamPos);
                 return result;
             }
 
@@ -268,10 +283,14 @@ public class VideoPlayer {
             initPlayer();
         }
 
-
         if (streamRequested) {
             // Stream already requested, just resume.
             logPosition("play");
+            if (exoPlayer.getPlaybackState() == Player.STATE_IDLE) {
+                // Work around main player getting stopped due to Truex web view's own video playbacks.
+                // This can happen on some older 4K TVs.
+                exoPlayer.prepare();
+            }
             exoPlayer.play();
             return;
         }
