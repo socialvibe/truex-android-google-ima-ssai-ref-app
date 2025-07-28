@@ -25,6 +25,8 @@ import com.google.ads.interactivemedia.v3.api.player.VideoStreamPlayer;
 import com.truex.googlereferenceapp.home.StreamConfiguration;
 import com.truex.googlereferenceapp.player.ads.TruexAdManager;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,7 +54,7 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
 
     private boolean didSeekPastAdBreak;
 
-    // The renderer that drives the true[X] Engagement experience
+    // The renderer that drives the Infillion (true[X] or IDVx) engagement experience
     private TruexAdManager truexAdManager;
 
     /**
@@ -214,35 +216,59 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
 
     /**
      * Handles the ad started event
-     * If the ad is a true[X] placeholder ad, we will display an interactive true[X] ad
-     * Additionally, if the ad is a true[X] placeholder ad, we will seek past this initial ad
+     * If the ad is a true[X] or IDVx placeholder ad, we will display the appropriate interactive ad
+     * Additionally, if the ad is an Infillion placeholder ad, we will seek to just before its end
      * @param event the ad started event object
      */
     private void onAdStarted(AdEvent event) {
         Ad ad = event.getAd();
 
-        // [1] - Look for TrueX ads
-        if (!"trueX".equals(ad.getAdSystem())) return; // not a trueX ad
+        // [1] - Look for Infillion ads (both TrueX and IDVx)
+        String adSystem = ad.getAdSystem();
+        boolean isTrueX = "trueX".equals(adSystem);
+        boolean isIDVx = "IDVx".equals(adSystem);
+        if (!isTrueX && !isIDVx) return; // not an Infillion ad
 
         // Retrieve the ad pod info
         AdPodInfo adPodInfo = ad.getAdPodInfo();
         if (adPodInfo == null) return;
 
         // [2] - Get ad parameters
-        // The ad description contains the trueX vast config url
+        // The ad description contains the Infillion vast config url
         String vastConfigUrl = ad.getDescription();
-        if (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com")) return; // invalid vast config url
+        JSONObject params = null;
+        
+        // Try to get trafficking parameters if available
+        try {
+            String traffickingParams = ad.getTraffickingParameters();
+            if (traffickingParams != null && !traffickingParams.isEmpty()) {
+                params = new JSONObject(traffickingParams);
+            }
+        } catch (Exception e) {
+            // Trafficking parameters not available or not valid JSON
+        }
+        
+        // Validate we have either valid parameters or a valid VAST URL
+        if (params == null && (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com"))) {
+            return; // No valid configuration found
+        }
 
         // [3] - Prepare to enter the engagement
-        // Pause the underlying stream, in order to present the true[X] experience, and seek over the current ad,
-        // which is just a placeholder for the true[X] ad.
+        // Pause the underlying stream, in order to present the Infillion experience, and seek over the current ad,
+        // which is just a placeholder for the Infillion engagement.
         videoPlayer.pause();
         videoPlayer.hide();
         seekPastInitialAd(ad, adPodInfo);
 
-        // [4] - Start the TrueX engagement
+        // [4] - Start the Infillion engagement (TrueX or IDVx)
         truexAdManager = new TruexAdManager(context, this);
-        truexAdManager.startAd(adUiContainer, vastConfigUrl);
+        
+        // Initialize with params if available, otherwise use VAST URL
+        if (params != null) {
+            truexAdManager.startAd(adUiContainer, params, isIDVx);
+        } else {
+            truexAdManager.startAd(adUiContainer, vastConfigUrl, isIDVx);
+        }
     }
 
     /**
