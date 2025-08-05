@@ -30,13 +30,18 @@ that correlate with the steps listed below. For example, if you want to see how 
 parameters, search the `VideoPlayerWithAds.java` file for `[3]` and you will find the related
 code.
 
+## VAST Config Loading
+GAM (Google Ad Manager) retrieves VAST data from the following dedicated S3 endpoints:
+https://s3.us-east-1.amazonaws.com/stash.truex.com/sample-tags/dfp-dai/firetv-vmap/vast-preroll.xml
+https://s3.us-east-1.amazonaws.com/stash.truex.com/sample-tags/dfp-dai/firetv-vmap/vast-midroll.xml
+
 ## Steps
 
-### [1] - Look for TrueX ads (VideoPlayerWithAds.java)
+### [1] - Look for Infillion ads (VideoPlayerWithAds.java)
 
 In the IMA delegate method `onAdEvent`, we call `onAdStarted` when the event is an ad
-started event. In `onAdStarted`, we call the `ad`'s `getAdSystem` method. If the value matches `trueX`,
-then we pause ad playback begin the TrueX engagement experience.
+started event. In `onAdStarted`, we call the `ad`'s `getAdSystem` method. If the value matches `trueX` 
+or `IDVx`, then we pause ad playback begin the appropriate Infillion engagement experience.
 
 ### [2] - Get ad parameters (VideoPlayerWithAds.java)
 
@@ -50,12 +55,13 @@ First we pause playback. There will be a "placeholder" ad at the first position 
 break (this is the TrueX ad also containing information on how to enter the engagement).
 We need to seek over the placeholder ad video.
 
-### [4] - Start the TrueX engagement (VideoPlayerWithAds.java)
+### [4] - Start the Infillion engagement (VideoPlayerWithAds.java)
 
 Once we have the ad parameter JSON object, we can initialize the TrueX ad manager and set
-our `VideoPlaybackManager` as its `PlaybackHandler`. We then start the TrueX ad experience
+our `VideoPlaybackManager` as its `PlaybackHandler`. We then start the Infillion ad experience
 by calling `startAd` on the TrueX ad manager that we instantiated, with the ad parameters,
-slot type, and the view group in which we will be displaying the TrueX ad experience.
+slot type, the view group in which we will be displaying the ad experience, and a flag
+indicating whether this is an IDVx ad (which disables user cancel stream functionality).
 
 ### [5] - Respond to AD_FREE_POD (TruexAdManager.java)
 

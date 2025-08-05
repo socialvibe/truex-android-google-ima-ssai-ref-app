@@ -9,12 +9,16 @@ import com.truex.adrenderer.TruexAdOptions;
 import com.truex.adrenderer.TruexAdRenderer;
 import com.truex.googlereferenceapp.player.PlaybackHandler;
 
+import org.json.JSONObject;
+
 import java.util.Map;
 
 /**
- * This class holds a reference to the true[X] ad renderer and handles all of the event handling
+ * This class holds a reference to the Infillion ad renderer and handles all of the event handling
  * for the example integration application. This class interacts with the video player by resuming
  * the content when the engagement is complete.
+ * 
+ * Supports both true[X] (interactive choice card with credit) and IDVx (interactive without credit) ad types.
  */
 public class TruexAdManager {
     private static final String CLASSTAG = TruexAdManager.class.getSimpleName();
@@ -34,16 +38,36 @@ public class TruexAdManager {
     }
 
     /**
-     * Start displaying the true[X] engagement
-     * @param viewGroup - the view group in which you would like to display the true[X] engagement
-     * @param vastConfigUrl - url for accessing the trueX ad vast config JSON values.
+     * Start displaying the Infillion engagement (true[X] or IDVx)
+     * @param viewGroup - the view group in which you would like to display the engagement
+     * @param vastConfigUrl - url for accessing the ad vast config JSON values
+     * @param isIDVx - true if this is an IDVx ad, false for regular true[X] ads
      */
-    public void startAd(ViewGroup viewGroup, String vastConfigUrl) {
+    public void startAd(ViewGroup viewGroup, String vastConfigUrl, boolean isIDVx) {
         // Always allow remote debugging of ad web view for test and reference apps.
         TruexAdOptions options = new TruexAdOptions();
         options.enableWebViewDebugging = true;
+        // IDVx ads do not support user cancel stream functionality
+        options.supportsUserCancelStream = !isIDVx;
 
         truexAdRenderer.init(vastConfigUrl, options);
+        truexAdRenderer.start(viewGroup);
+    }
+
+    /**
+     * Start displaying the Infillion engagement (true[X] or IDVx) with JSON parameters
+     * @param viewGroup - the view group in which you would like to display the engagement
+     * @param params - JSON parameters for the ad
+     * @param isIDVx - true if this is an IDVx ad, false for regular true[X] ads
+     */
+    public void startAd(ViewGroup viewGroup, JSONObject params, boolean isIDVx) {
+        // Always allow remote debugging of ad web view for test and reference apps.
+        TruexAdOptions options = new TruexAdOptions();
+        options.enableWebViewDebugging = true;
+        // IDVx ads do not support user cancel stream functionality
+        options.supportsUserCancelStream = !isIDVx;
+
+        truexAdRenderer.init(params, options);
         truexAdRenderer.start(viewGroup);
     }
 
