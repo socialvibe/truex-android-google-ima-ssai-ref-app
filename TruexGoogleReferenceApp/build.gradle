@@ -75,7 +75,7 @@ dependencies {
     // True[x] Ad Renderer (TAR) Dependency
     // Note: to refer to a local version of the TAR project, comment out the com.truex dependency
     // and uncomment the project one below.
-    implementation 'com.truex:TruexAdRenderer-Android:2.9.0'
+    implementation 'com.truex:TruexAdRenderer-Android:2.10.4'
     //implementation project(':TruexAdRenderer')
 }
 
