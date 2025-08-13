@@ -10,7 +10,7 @@ android {
             storePassword 'true[STORE]'
         }
     }
-    compileSdk 34
+    compileSdk 35
     defaultConfig {
         applicationId "com.truex.googlereferenceapp"
         minSdkVersion 28
