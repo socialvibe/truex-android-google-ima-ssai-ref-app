@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId "com.truex.googlereferenceapp"
         minSdkVersion 28
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode 2
         versionName "2.2.0"
         signingConfig signingConfigs.SigningConfiguration
@@ -75,7 +75,7 @@ dependencies {
     // True[x] Ad Renderer (TAR) Dependency
     // Note: to refer to a local version of the TAR project, comment out the com.truex dependency
     // and uncomment the project one below.
-    implementation 'com.truex:TruexAdRenderer-Android:2.9.2'
+    implementation 'com.truex:TruexAdRenderer-Android:2.10.4'
     //implementation project(':TruexAdRenderer')
 }
 
