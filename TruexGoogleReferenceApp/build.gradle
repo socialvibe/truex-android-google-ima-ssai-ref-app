@@ -10,11 +10,11 @@ android {
             storePassword 'true[STORE]'
         }
     }
-    compileSdk 34
+    compileSdk 35
     defaultConfig {
         applicationId "com.truex.googlereferenceapp"
         minSdkVersion 28
-        targetSdkVersion 34
+        targetSdkVersion 35
         versionCode 2
         versionName "2.2.0"
         signingConfig signingConfigs.SigningConfiguration
