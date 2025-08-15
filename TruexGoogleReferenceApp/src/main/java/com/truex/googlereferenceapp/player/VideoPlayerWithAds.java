@@ -207,8 +207,10 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
         // Add the duration of the initial ad
         seekPosition.addSeconds(ad.getDuration());
 
-        // Subtract a hundred milliseconds to avoid displaying a black screen with a frozen UI
-        seekPosition.subtractMilliseconds(100);
+        // Subtract just over 1 second to stay outside IMA SDK's auto-advance threshold.
+        // The SDK auto-advances to the next ad when playhead is ≤1 second from ad end,
+        // causing duplicate STARTED events (problematic with back-to-back Infillion ads).
+        seekPosition.subtractMilliseconds(1001);
 
         // Seek past the ad
         videoPlayer.seekTo(seekPosition.getMilliseconds());
