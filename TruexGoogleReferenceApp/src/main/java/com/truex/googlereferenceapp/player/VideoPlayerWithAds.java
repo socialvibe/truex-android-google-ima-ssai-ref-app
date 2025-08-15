@@ -208,7 +208,7 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
         seekPosition.addSeconds(ad.getDuration());
 
         // Subtract a hundred milliseconds to avoid displaying a black screen with a frozen UI
-        seekPosition.subtractMilliseconds(100);
+        seekPosition.subtractMilliseconds(1001);
 
         // Seek past the ad
         videoPlayer.seekTo(seekPosition.getMilliseconds());
