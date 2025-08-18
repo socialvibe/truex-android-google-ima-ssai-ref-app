@@ -300,6 +300,8 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
 
                 // Disable player controls
                 videoPlayer.enableControls(false);
+
+                lastAdEndTime = null;
             }
 
             @Override
