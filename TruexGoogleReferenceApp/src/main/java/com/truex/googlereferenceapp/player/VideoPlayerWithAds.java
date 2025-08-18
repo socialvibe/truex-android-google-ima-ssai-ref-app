@@ -57,6 +57,8 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
     // The renderer that drives the Infillion (true[X] or IDVx) engagement experience
     private TruexAdManager truexAdManager;
 
+    private SeekPosition lastAdEndTime;
+
     /**
      * Creates a new VideoPlaybackManager that implements IMA direct-ad-insertion.
      * @param context the app's context.
@@ -196,27 +198,6 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
     }
 
     /**
-     * Seeks past the first ad within the current ad pod
-     * @param ad the first ad within the current ad pod
-     * @param adPodInfo the ad pod info object for the current ad pod
-     */
-    private void seekPastInitialAd(Ad ad, AdPodInfo adPodInfo) {
-        // Set-up the initial offset for seeking past the initial ad
-        SeekPosition seekPosition = SeekPosition.fromSeconds(adPodInfo.getTimeOffset());
-
-        // Add the duration of the initial ad
-        seekPosition.addSeconds(ad.getDuration());
-
-        // Subtract just over 1 second to stay outside IMA SDK's auto-advance threshold.
-        // The SDK auto-advances to the next ad when playhead is ≤1 second from ad end,
-        // causing duplicate STARTED events (problematic with back-to-back Infillion ads).
-        seekPosition.subtractMilliseconds(1001);
-
-        // Seek past the ad
-        videoPlayer.seekTo(seekPosition.getMilliseconds());
-    }
-
-    /**
      * Handles the ad started event
      * If the ad is a true[X] or IDVx placeholder ad, we will display the appropriate interactive ad
      * Additionally, if the ad is an Infillion placeholder ad, we will seek to just before its end
@@ -224,6 +205,14 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
      */
     private void onAdStarted(AdEvent event) {
         Ad ad = event.getAd();
+        AdPodInfo adPodInfo = ad.getAdPodInfo();
+        if (adPodInfo == null) return;
+
+        // Calculate the next resume position
+        if (lastAdEndTime == null) {
+            lastAdEndTime = SeekPosition.fromSeconds(adPodInfo.getTimeOffset());
+        }
+        lastAdEndTime.addSeconds(ad.getDuration());
 
         // [1] - Look for Infillion ads (both TrueX and IDVx)
         String adSystem = ad.getAdSystem();
@@ -231,15 +220,11 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
         boolean isIDVx = "IDVx".equals(adSystem);
         if (!isTrueX && !isIDVx) return; // not an Infillion ad
 
-        // Retrieve the ad pod info
-        AdPodInfo adPodInfo = ad.getAdPodInfo();
-        if (adPodInfo == null) return;
-
         // [2] - Get ad parameters
         // The ad description contains the Infillion vast config url
         String vastConfigUrl = ad.getDescription();
         JSONObject params = null;
-        
+
         // Try to get trafficking parameters if available
         try {
             String traffickingParams = ad.getTraffickingParameters();
@@ -249,22 +234,20 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
         } catch (Exception e) {
             // Trafficking parameters not available or not valid JSON
         }
-        
+
         // Validate we have either valid parameters or a valid VAST URL
         if (params == null && (vastConfigUrl == null || !vastConfigUrl.contains("get.truex.com"))) {
             return; // No valid configuration found
         }
 
         // [3] - Prepare to enter the engagement
-        // Pause the underlying stream, in order to present the Infillion experience, and seek over the current ad,
-        // which is just a placeholder for the Infillion engagement.
+        // Pause the underlying stream, in order to present the Infillion experience
         videoPlayer.pause();
         videoPlayer.hide();
-        seekPastInitialAd(ad, adPodInfo);
 
         // [4] - Start the Infillion engagement (TrueX or IDVx)
         truexAdManager = new TruexAdManager(context, this);
-        
+
         // Initialize with params if available, otherwise use VAST URL
         if (params != null) {
             truexAdManager.startAd(adUiContainer, params, isIDVx);
@@ -332,6 +315,8 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
 
                 // Re-enable player controls
                 videoPlayer.enableControls(true);
+
+                lastAdEndTime = null;
             }
 
             @Override
@@ -374,6 +359,12 @@ public class VideoPlayerWithAds implements PlaybackHandler, AdEvent.AdEventListe
             if (streamPlayer != null) {
                 streamPlayer.onAdBreakEnded();
             }
+        }
+        else if (lastAdEndTime != null) {
+            // seek to the end of the placeholder video for the current ad
+            SeekPosition seekPosition = SeekPosition.fromMilliseconds(lastAdEndTime.getMilliseconds());
+            seekPosition.subtractMilliseconds(100);
+            videoPlayer.seekTo(seekPosition.getMilliseconds());
         }
     }
 
